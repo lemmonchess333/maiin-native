@@ -71,7 +71,7 @@ export function RunMapView({ route, height = 200 }: RunMapViewProps) {
     <View className="overflow-hidden rounded-xl" style={{ height }}>
       <MapLibreGL.MapView
         style={{ flex: 1 }}
-        styleURL={STYLE_URL}
+        mapStyle={STYLE_URL}
         attributionEnabled={false}
         logoEnabled={false}
       >

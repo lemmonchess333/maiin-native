@@ -1,4 +1,4 @@
-import * as FileSystem from "expo-file-system";
+import { Paths, File } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import type { Workout, Run } from "./types";
 
@@ -20,9 +20,9 @@ export async function exportWorkoutsCSV(workouts: Workout[]) {
     .join("\n");
 
   const csv = header + rows;
-  const path = `${FileSystem.cacheDirectory}maiin_workouts.csv`;
-  await FileSystem.writeAsStringAsync(path, csv);
-  await Sharing.shareAsync(path, {
+  const file = new File(Paths.cache, "maiin_workouts.csv");
+  await file.write(csv);
+  await Sharing.shareAsync(file.uri, {
     mimeType: "text/csv",
     dialogTitle: "Export Workouts",
   });
@@ -41,9 +41,9 @@ export async function exportRunsCSV(runs: Run[]) {
     .join("\n");
 
   const csv = header + rows;
-  const path = `${FileSystem.cacheDirectory}maiin_runs.csv`;
-  await FileSystem.writeAsStringAsync(path, csv);
-  await Sharing.shareAsync(path, {
+  const file = new File(Paths.cache, "maiin_runs.csv");
+  await file.write(csv);
+  await Sharing.shareAsync(file.uri, {
     mimeType: "text/csv",
     dialogTitle: "Export Runs",
   });
