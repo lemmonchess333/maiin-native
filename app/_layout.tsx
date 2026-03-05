@@ -7,6 +7,7 @@ import "react-native-reanimated";
 import "../global.css";
 
 import { AuthProvider } from "@/lib/auth-context";
+import { useAuthGate } from "@/hooks/useAuthGate";
 
 export { ErrorBoundary } from "expo-router";
 
@@ -15,6 +16,23 @@ export const unstable_settings = {
 };
 
 SplashScreen.preventAutoHideAsync();
+
+function RootNav() {
+  useAuthGate();
+
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: "#0F0F14" },
+      }}
+    >
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="sign-in" options={{ animationTypeForReplace: "pop" }} />
+      <Stack.Screen name="modal" options={{ presentation: "modal" }} />
+    </Stack>
+  );
+}
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -38,15 +56,7 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <StatusBar style="light" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: "#0F0F14" },
-        }}
-      >
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="modal" options={{ presentation: "modal" }} />
-      </Stack>
+      <RootNav />
     </AuthProvider>
   );
 }
