@@ -14,9 +14,12 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { StatBadge } from "@/components/StatBadge";
 import { Skeleton, SkeletonStatRow } from "@/components/Skeleton";
 import { WeeklyChart } from "@/components/WeeklyChart";
+import { AchievementGrid } from "@/components/AchievementGrid";
 import { useProfile } from "@/hooks/useProfile";
 import { useWorkouts } from "@/hooks/useWorkouts";
 import { useRuns } from "@/hooks/useRuns";
+import { usePersonalRecords } from "@/hooks/usePersonalRecords";
+import { computeAchievements } from "@/lib/achievements";
 import { User, Award, Calendar, Settings, Pencil } from "lucide-react-native";
 
 export default function ProfileScreen() {
@@ -25,6 +28,8 @@ export default function ProfileScreen() {
   const { profile, loading } = useProfile();
   const { workouts } = useWorkouts(50);
   const { runs } = useRuns(50);
+  const { records } = usePersonalRecords();
+  const achievements = computeAchievements(profile, records);
 
   function handleSignOut() {
     Alert.alert("Sign Out", "Are you sure?", [
@@ -113,26 +118,13 @@ export default function ProfileScreen() {
         </Card>
 
         {/* Achievements */}
-        <SectionHeader title="Achievements" />
-        <Card className="mb-5">
-          <View className="flex-row items-center">
-            <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-warning/20">
-              <Award size={20} color="#f59e0b" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-sm font-semibold text-white">
-                {(profile?.totalWorkouts ?? 0) >= 100
-                  ? "Century Club"
-                  : "Getting Started"}
-              </Text>
-              <Text className="text-xs text-gray-400">
-                {(profile?.totalWorkouts ?? 0) >= 100
-                  ? "Logged 100+ workouts"
-                  : `${profile?.totalWorkouts ?? 0}/100 workouts`}
-              </Text>
-            </View>
-          </View>
-        </Card>
+        <SectionHeader
+          title="Achievements"
+          action={`${achievements.filter((a) => a.unlocked).length}/${achievements.length}`}
+        />
+        <View className="mb-5">
+          <AchievementGrid achievements={achievements} />
+        </View>
 
         {/* Account */}
         <SectionHeader title="Account" />

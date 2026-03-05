@@ -19,6 +19,7 @@ export interface Workout {
   name: string;
   exercises: WorkoutExercise[];
   durationMinutes: number;
+  notes?: string;
   createdAt: Timestamp;
 }
 

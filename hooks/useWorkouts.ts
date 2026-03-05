@@ -48,13 +48,14 @@ export function useWorkouts(maxResults = 20) {
   }, [user, maxResults]);
 
   const saveWorkout = useCallback(
-    async (name: string, exercises: WorkoutExercise[], durationMinutes: number) => {
+    async (name: string, exercises: WorkoutExercise[], durationMinutes: number, notes?: string) => {
       if (!user) return;
       await addDoc(collection(db, COL), {
         userId: user.uid,
         name,
         exercises,
         durationMinutes,
+        ...(notes ? { notes } : {}),
         createdAt: Timestamp.now(),
       });
       // Increment profile stats

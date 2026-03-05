@@ -10,10 +10,12 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
+import { PRCelebration } from "@/components/PRCelebration";
 import { useWorkouts } from "@/hooks/useWorkouts";
 import { useTemplates } from "@/hooks/useTemplates";
+import { usePersonalRecords } from "@/hooks/usePersonalRecords";
 import * as haptics from "@/lib/haptics";
-import { Plus, Trash2, Dumbbell, Check, Bookmark, BookmarkPlus } from "lucide-react-native";
+import { Plus, Trash2, Dumbbell, Check, Bookmark, BookmarkPlus, Trophy } from "lucide-react-native";
 
 interface LocalSet {
   weight: string;
@@ -43,10 +45,16 @@ const TEMPLATES = [
 export default function LogScreen() {
   const { saveWorkout } = useWorkouts();
   const { templates: savedTemplates, saveTemplate } = useTemplates();
+  const { getPR, checkAndSavePR } = usePersonalRecords();
   const [exercises, setExercises] = useState<LocalExercise[]>([]);
   const [showTemplates, setShowTemplates] = useState(false);
   const [workoutName, setWorkoutName] = useState("");
+  const [workoutNotes, setWorkoutNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [prCelebration, setPrCelebration] = useState<{
+    exercise: string;
+    weight: number;
+  } | null>(null);
   const startTime = useRef(Date.now());
 
   function loadTemplate(template: { name: string; exercises: { name: string; defaultSets: number }[] }) {
@@ -145,7 +153,22 @@ export default function LogScreen() {
         workoutName || "Untitled Workout",
         firestoreExercises,
         durationMinutes,
+        workoutNotes.trim() || undefined,
       );
+
+      // Check for PRs
+      for (const ex of firestoreExercises) {
+        for (const set of ex.sets) {
+          if (set.weight > 0) {
+            const isPR = await checkAndSavePR(ex.name, set.weight, set.reps);
+            if (isPR) {
+              haptics.heavyTap();
+              setPrCelebration({ exercise: ex.name, weight: set.weight });
+              break;
+            }
+          }
+        }
+      }
 
       const totalSets = firestoreExercises.reduce(
         (sum, ex) => sum + ex.sets.length,
@@ -158,6 +181,7 @@ export default function LogScreen() {
       );
       setExercises([]);
       setWorkoutName("");
+      setWorkoutNotes("");
     } catch (err: any) {
       Alert.alert("Error", err.message ?? "Failed to save workout");
     } finally {
@@ -213,20 +237,43 @@ export default function LogScreen() {
 
         {/* Workout Name */}
         <TextInput
-          className="mb-4 h-12 rounded-xl border border-[#2A2A3A] bg-[#1A1A24] px-4 text-white"
+          className="mb-3 h-12 rounded-xl border border-[#2A2A3A] bg-[#1A1A24] px-4 text-white"
           placeholder="Workout name (e.g., Upper Body Push)"
           placeholderTextColor="#6B7280"
           value={workoutName}
           onChangeText={setWorkoutName}
         />
 
+        {/* Notes */}
+        <TextInput
+          className="mb-4 h-20 rounded-xl border border-[#2A2A3A] bg-[#1A1A24] px-4 py-3 text-white"
+          placeholder="Notes (optional)"
+          placeholderTextColor="#6B7280"
+          value={workoutNotes}
+          onChangeText={setWorkoutNotes}
+          multiline
+          textAlignVertical="top"
+        />
+
         {/* Exercises */}
-        {exercises.map((exercise) => (
+        {exercises.map((exercise) => {
+          const currentPR = getPR(exercise.name);
+          return (
           <Card key={exercise.id} className="mb-4">
             <View className="mb-3 flex-row items-center justify-between">
-              <Text className="text-base font-bold text-brand">
-                {exercise.name}
-              </Text>
+              <View className="flex-1 flex-row items-center">
+                <Text className="text-base font-bold text-brand">
+                  {exercise.name}
+                </Text>
+                {currentPR && (
+                  <View className="ml-2 flex-row items-center rounded-md bg-warning/15 px-2 py-0.5">
+                    <Trophy size={10} color="#f59e0b" />
+                    <Text className="ml-1 text-[10px] font-semibold text-warning">
+                      PR {currentPR.weight}lbs
+                    </Text>
+                  </View>
+                )}
+              </View>
               <TouchableOpacity onPress={() => removeExercise(exercise.id)}>
                 <Trash2 size={18} color="#6B7280" />
               </TouchableOpacity>
@@ -288,7 +335,8 @@ export default function LogScreen() {
               <Text className="ml-1 text-sm text-brand">Add Set</Text>
             </TouchableOpacity>
           </Card>
-        ))}
+          );
+        })}
 
         {/* Add Exercise */}
         {showTemplates ? (
@@ -337,6 +385,13 @@ export default function LogScreen() {
 
         <View className="h-4" />
       </ScrollView>
+
+      <PRCelebration
+        exercise={prCelebration?.exercise ?? ""}
+        weight={prCelebration?.weight ?? 0}
+        visible={prCelebration !== null}
+        onDone={() => setPrCelebration(null)}
+      />
     </SafeAreaView>
   );
 }
