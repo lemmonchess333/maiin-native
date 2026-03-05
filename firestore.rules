@@ -1,0 +1,70 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // User profiles — users can only read/write their own
+    match /userProfiles/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Workouts — users can only access their own
+    match /workouts/{workoutId} {
+      allow read, delete: if request.auth != null
+        && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid;
+    }
+
+    // Runs — users can only access their own
+    match /runs/{runId} {
+      allow read, delete: if request.auth != null
+        && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid;
+    }
+
+    // Workout templates — users can only access their own
+    match /workoutTemplates/{templateId} {
+      allow read, delete: if request.auth != null
+        && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid;
+    }
+
+    // Personal records — users can only access their own
+    match /personalRecords/{recordId} {
+      allow read: if request.auth != null
+        && resource.data.userId == request.auth.uid;
+      allow create, update: if request.auth != null
+        && request.resource.data.userId == request.auth.uid;
+    }
+
+    // Body weight — users can only access their own
+    match /bodyWeight/{entryId} {
+      allow read, delete: if request.auth != null
+        && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid;
+    }
+
+    // Social posts — any authenticated user can read; only owner can create/delete
+    match /socialPosts/{postId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null;
+      allow delete: if request.auth != null
+        && resource.data.userId == request.auth.uid;
+    }
+
+    // Follows — any authenticated user can read; only follower can create/delete
+    match /follows/{followId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.followerId == request.auth.uid;
+      allow delete: if request.auth != null
+        && resource.data.followerId == request.auth.uid;
+    }
+  }
+}

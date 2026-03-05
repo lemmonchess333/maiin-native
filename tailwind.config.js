@@ -9,11 +9,13 @@ module.exports = {
     extend: {
       colors: {
         background: "#0F0F14",
+        surface: "#1A1A24",
         brand: "#8b5cf6",
         running: "#FF6B6B",
         teal: "#2dd4bf",
         success: "#34d399",
         warning: "#f59e0b",
+        border: "#2A2A3A",
       },
     },
   },
