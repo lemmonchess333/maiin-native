@@ -28,6 +28,7 @@ interface LocalExercise {
   id: string;
   name: string;
   sets: LocalSet[];
+  supersetGroup?: number;
 }
 
 const TEMPLATES = [
@@ -133,6 +134,33 @@ export default function LogScreen() {
           : ex,
       ),
     );
+  }
+
+  function toggleSuperset(exerciseId: string) {
+    haptics.selection();
+    setExercises((prev) => {
+      const idx = prev.findIndex((ex) => ex.id === exerciseId);
+      if (idx <= 0) return prev; // Can't superset the first exercise
+
+      const current = prev[idx];
+      const prevEx = prev[idx - 1];
+
+      // If already in a superset, remove it
+      if (current.supersetGroup != null) {
+        return prev.map((ex) =>
+          ex.id === exerciseId ? { ...ex, supersetGroup: undefined } : ex,
+        );
+      }
+
+      // Link with previous exercise's group, or create new group
+      const group = prevEx.supersetGroup ?? Date.now();
+      return prev.map((ex) => {
+        if (ex.id === exerciseId || ex.id === prevEx.id) {
+          return { ...ex, supersetGroup: group };
+        }
+        return ex;
+      });
+    });
   }
 
   async function handleFinish() {
@@ -277,10 +305,25 @@ export default function LogScreen() {
         />
 
         {/* Exercises */}
-        {exercises.map((exercise) => {
+        {exercises.map((exercise, exIdx) => {
           const currentPR = getPR(exercise.name);
+          const isInSuperset = exercise.supersetGroup != null;
+          const prevInSameSuperset =
+            exIdx > 0 &&
+            exercises[exIdx - 1].supersetGroup != null &&
+            exercises[exIdx - 1].supersetGroup === exercise.supersetGroup;
           return (
-          <Card key={exercise.id} className="mb-4">
+          <View key={exercise.id}>
+            {/* Superset link indicator */}
+            {prevInSameSuperset && (
+              <View className="mb-1 ml-5 flex-row items-center">
+                <View className="h-4 w-0.5 bg-teal" />
+                <Text className="ml-2 text-[10px] font-semibold text-teal">
+                  SUPERSET
+                </Text>
+              </View>
+            )}
+          <Card className={`mb-4 ${isInSuperset ? "border border-teal/30" : ""}`}>
             <View className="mb-3 flex-row items-center justify-between">
               <View className="flex-1 flex-row items-center">
                 <Text className="text-base font-bold text-brand">
@@ -348,14 +391,30 @@ export default function LogScreen() {
               </View>
             ))}
 
-            <TouchableOpacity
-              className="mt-2 flex-row items-center justify-center py-2"
-              onPress={() => addSet(exercise.id)}
-            >
-              <Plus size={14} color="#8b5cf6" />
-              <Text className="ml-1 text-sm text-brand">Add Set</Text>
-            </TouchableOpacity>
+            <View className="mt-2 flex-row items-center justify-center">
+              <TouchableOpacity
+                className="flex-row items-center py-2 px-3"
+                onPress={() => addSet(exercise.id)}
+              >
+                <Plus size={14} color="#8b5cf6" />
+                <Text className="ml-1 text-sm text-brand">Add Set</Text>
+              </TouchableOpacity>
+              {exIdx > 0 && (
+                <>
+                  <Text className="text-gray-600">·</Text>
+                  <TouchableOpacity
+                    className="flex-row items-center py-2 px-3"
+                    onPress={() => toggleSuperset(exercise.id)}
+                  >
+                    <Text className={`text-sm ${isInSuperset ? "text-teal" : "text-gray-500"}`}>
+                      {isInSuperset ? "Unlink" : "Superset"}
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
           </Card>
+          </View>
           );
         })}
 

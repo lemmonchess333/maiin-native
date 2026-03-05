@@ -16,6 +16,7 @@ import { StatBadge } from "@/components/StatBadge";
 import { EmptyState } from "@/components/EmptyState";
 import { SkeletonCard, SkeletonStatRow } from "@/components/Skeleton";
 import { PressableScale } from "@/components/PressableScale";
+import { InsightsCard } from "@/components/InsightsCard";
 import { useWorkouts } from "@/hooks/useWorkouts";
 import { useRuns } from "@/hooks/useRuns";
 import { useProfile } from "@/hooks/useProfile";
@@ -211,6 +212,10 @@ export default function HomeScreen() {
             );
           })
         )}
+
+        {/* Insights */}
+        <SectionHeader title="Insights" />
+        <InsightsCard workouts={workouts} runs={runs} />
 
         {/* Training Load */}
         <SectionHeader title="Training Load" />

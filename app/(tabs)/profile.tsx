@@ -14,6 +14,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { StatBadge } from "@/components/StatBadge";
 import { Skeleton, SkeletonStatRow } from "@/components/Skeleton";
 import { WeeklyChart } from "@/components/WeeklyChart";
+import { BodyWeightChart } from "@/components/BodyWeightChart";
 import { AchievementGrid } from "@/components/AchievementGrid";
 import { useProfile } from "@/hooks/useProfile";
 import { useWorkouts } from "@/hooks/useWorkouts";
@@ -115,6 +116,12 @@ export default function ProfileScreen() {
         <SectionHeader title="This Week" />
         <Card className="mb-5">
           <WeeklyChart workouts={workouts} runs={runs} />
+        </Card>
+
+        {/* Body Weight */}
+        <SectionHeader title="Body Weight" />
+        <Card className="mb-5">
+          <BodyWeightChart />
         </Card>
 
         {/* Achievements */}

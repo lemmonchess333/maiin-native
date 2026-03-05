@@ -39,5 +39,13 @@ service cloud.firestore {
       allow create, update: if request.auth != null
         && request.resource.data.userId == request.auth.uid;
     }
+
+    // Body weight — users can only access their own
+    match /bodyWeight/{entryId} {
+      allow read, delete: if request.auth != null
+        && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid;
+    }
   }
 }
