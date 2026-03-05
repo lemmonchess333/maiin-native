@@ -4,6 +4,7 @@ import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { Share2 } from "lucide-react-native";
 import { shareActivity } from "@/lib/share";
 import { computeSplits } from "@/lib/splits";
+import { RunMapView } from "@/components/RunMapView";
 import type { Workout, Run } from "@/lib/types";
 import type { Activity } from "@/lib/types";
 
@@ -224,10 +225,13 @@ function RunDetail({ run }: { run: Run }) {
         </View>
       )}
 
-      {run.route.length > 0 && (
-        <Text className="text-sm text-gray-400">
-          {run.route.length} GPS points recorded
-        </Text>
+      {run.route.length > 1 && (
+        <View className="mb-4">
+          <Text className="mb-2 text-sm font-semibold text-white">
+            Route Map
+          </Text>
+          <RunMapView route={run.route} height={200} />
+        </View>
       )}
     </View>
   );

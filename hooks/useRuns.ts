@@ -15,6 +15,7 @@ import {
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth-context";
 import { updateProfileStats } from "@/lib/profile-stats";
+import { publishSocialPost } from "@/lib/social-publish";
 import type { Run, GpsPoint } from "@/lib/types";
 
 const COL = "runs";
@@ -61,7 +62,7 @@ export function useRuns(maxResults = 20) {
       const paceSec = Math.floor(paceTotal % 60);
       const pacePerMile = `${paceMin}:${String(paceSec).padStart(2, "0")}`;
 
-      await addDoc(collection(db, COL), {
+      const docRef = await addDoc(collection(db, COL), {
         userId: user.uid,
         distanceMiles,
         durationSeconds,
@@ -75,6 +76,12 @@ export function useRuns(maxResults = 20) {
         totalRuns: increment(1),
         totalMiles: increment(distanceMiles),
       });
+      // Publish to social feed
+      const mins = Math.floor(durationSeconds / 60);
+      const secs = durationSeconds % 60;
+      const detail = `Run — ${distanceMiles.toFixed(2)} mi in ${mins}:${String(secs).padStart(2, "0")} (${pacePerMile}/mi)`;
+      const displayName = user.displayName || "Athlete";
+      publishSocialPost(user.uid, displayName, "run", detail, docRef.id).catch(() => {});
     },
     [user],
   );

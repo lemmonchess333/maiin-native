@@ -15,6 +15,7 @@ import {
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth-context";
 import { updateProfileStats } from "@/lib/profile-stats";
+import { publishSocialPost } from "@/lib/social-publish";
 import type { Workout, WorkoutExercise } from "@/lib/types";
 
 const COL = "workouts";
@@ -50,7 +51,7 @@ export function useWorkouts(maxResults = 20) {
   const saveWorkout = useCallback(
     async (name: string, exercises: WorkoutExercise[], durationMinutes: number, notes?: string) => {
       if (!user) return;
-      await addDoc(collection(db, COL), {
+      const docRef = await addDoc(collection(db, COL), {
         userId: user.uid,
         name,
         exercises,
@@ -62,6 +63,11 @@ export function useWorkouts(maxResults = 20) {
       await updateProfileStats(user.uid, {
         totalWorkouts: increment(1),
       });
+      // Publish to social feed
+      const totalSets = exercises.reduce((s, ex) => s + ex.sets.length, 0);
+      const detail = `${name} — ${exercises.length} exercises, ${totalSets} sets, ${durationMinutes} min`;
+      const displayName = user.displayName || "Athlete";
+      publishSocialPost(user.uid, displayName, "workout", detail, docRef.id).catch(() => {});
     },
     [user],
   );

@@ -70,3 +70,24 @@ export interface WorkoutTemplate {
 export type Activity =
   | { type: "workout"; data: Workout }
   | { type: "run"; data: Run };
+
+// ── Social ────────────────────────────────────────────────
+
+export interface SocialPost {
+  id: string;
+  userId: string;
+  displayName: string;
+  type: "workout" | "run";
+  detail: string;
+  /** Reference to the original workout or run id */
+  refId: string;
+  likes: string[]; // array of userIds who liked
+  createdAt: Timestamp;
+}
+
+export interface Follow {
+  id: string;
+  followerId: string;
+  followingId: string;
+  createdAt: Timestamp;
+}

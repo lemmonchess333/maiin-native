@@ -8,6 +8,7 @@ import { useRuns } from "@/hooks/useRuns";
 import { exportWorkoutsCSV, exportRunsCSV } from "@/lib/export";
 import * as haptics from "@/lib/haptics";
 import { useAuth } from "@/lib/auth-context";
+import { useNotifications } from "@/hooks/useNotifications";
 import {
   ArrowLeft,
   Bell,
@@ -50,6 +51,7 @@ export default function SettingsScreen() {
   const { workouts } = useWorkouts(200);
   const { runs } = useRuns(200);
   const { changePassword } = useAuth();
+  const { scheduleWorkoutReminder, cancelAll } = useNotifications();
   const [notifications, setNotifications] = useState(true);
   const [useKm, setUseKm] = useState(false);
 
@@ -100,6 +102,11 @@ export default function SettingsScreen() {
                 onValueChange={(v) => {
                   haptics.selection();
                   setNotifications(v);
+                  if (v) {
+                    scheduleWorkoutReminder(9, 0); // 9:00 AM daily
+                  } else {
+                    cancelAll();
+                  }
                 }}
                 trackColor={{ false: "#2A2A3A", true: "#8b5cf6" }}
                 thumbColor="#fff"
