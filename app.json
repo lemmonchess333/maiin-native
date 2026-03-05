@@ -49,8 +49,7 @@
           "locationAlwaysAndWhenInUsePermission": "Maiin uses your location to track running routes.",
           "isAndroidBackgroundLocationEnabled": true
         }
-      ],
-      "expo-haptics"
+      ]
     ],
     "experiments": {
       "typedRoutes": true
