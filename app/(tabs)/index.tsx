@@ -4,7 +4,6 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -13,11 +12,14 @@ import { Card } from "@/components/Card";
 import { AnimatedCard } from "@/components/AnimatedCard";
 import { SectionHeader } from "@/components/SectionHeader";
 import { StatBadge } from "@/components/StatBadge";
+import { EmptyState } from "@/components/EmptyState";
+import { SkeletonCard, SkeletonStatRow } from "@/components/Skeleton";
+import { PressableScale } from "@/components/PressableScale";
 import { useWorkouts } from "@/hooks/useWorkouts";
 import { useRuns } from "@/hooks/useRuns";
 import { useProfile } from "@/hooks/useProfile";
 import { useStreakSync } from "@/hooks/useStreakSync";
-import { Dumbbell, Route, TrendingUp } from "lucide-react-native";
+import { Dumbbell, Route, TrendingUp, Zap } from "lucide-react-native";
 import type { Activity } from "@/lib/types";
 
 function timeAgo(date: Date): string {
@@ -115,7 +117,7 @@ export default function HomeScreen() {
         {/* Quick Actions */}
         <SectionHeader title="Quick Start" />
         <View className="mb-5 flex-row gap-3">
-          <TouchableOpacity
+          <PressableScale
             className="flex-1 items-center rounded-2xl bg-brand/20 py-5"
             onPress={() => router.push("/log")}
           >
@@ -123,8 +125,8 @@ export default function HomeScreen() {
             <Text className="mt-2 text-sm font-semibold text-brand">
               Log Lift
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+          </PressableScale>
+          <PressableScale
             className="flex-1 items-center rounded-2xl bg-running/20 py-5"
             onPress={() => router.push("/run")}
           >
@@ -132,7 +134,7 @@ export default function HomeScreen() {
             <Text className="mt-2 text-sm font-semibold text-running">
               Start Run
             </Text>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
 
         {/* Recent Activity */}
@@ -143,13 +145,17 @@ export default function HomeScreen() {
         />
 
         {loading ? (
-          <ActivityIndicator color="#8b5cf6" className="my-8" />
+          <>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </>
         ) : recentActivity.length === 0 ? (
-          <Card className="mb-3 items-center py-6">
-            <Text className="text-sm text-gray-400">
-              No workouts yet — start one above!
-            </Text>
-          </Card>
+          <EmptyState
+            icon={<Zap size={28} color="#8b5cf6" />}
+            title="No Activity Yet"
+            subtitle="Hit the quick start buttons above to log your first workout or run."
+          />
         ) : (
           recentActivity.map((item, index) => {
             const isWorkout = item.type === "workout";

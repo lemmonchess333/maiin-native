@@ -3,7 +3,6 @@ import {
   Text,
   ScrollView,
   Alert,
-  ActivityIndicator,
   TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -13,6 +12,7 @@ import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { SectionHeader } from "@/components/SectionHeader";
 import { StatBadge } from "@/components/StatBadge";
+import { Skeleton, SkeletonStatRow } from "@/components/Skeleton";
 import { WeeklyChart } from "@/components/WeeklyChart";
 import { useProfile } from "@/hooks/useProfile";
 import { useWorkouts } from "@/hooks/useWorkouts";
@@ -39,8 +39,16 @@ export default function ProfileScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator color="#8b5cf6" />
+      <SafeAreaView className="flex-1 bg-background">
+        <View className="px-5 pt-4">
+          <View className="mb-6 items-center">
+            <Skeleton width={80} height={80} borderRadius={40} className="mb-3" />
+            <Skeleton width={120} height={16} className="mb-2" />
+            <Skeleton width={160} height={12} />
+          </View>
+          <SkeletonStatRow />
+          <SkeletonStatRow />
+        </View>
       </SafeAreaView>
     );
   }

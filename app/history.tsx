@@ -4,7 +4,6 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -12,6 +11,9 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import BottomSheet from "@gorhom/bottom-sheet";
 import { AnimatedCard } from "@/components/AnimatedCard";
 import { SectionHeader } from "@/components/SectionHeader";
+import { EmptyState } from "@/components/EmptyState";
+import { SkeletonCard } from "@/components/Skeleton";
+import { PressableScale } from "@/components/PressableScale";
 import { WorkoutDetailSheet } from "@/components/WorkoutDetailSheet";
 import { useWorkouts } from "@/hooks/useWorkouts";
 import { useRuns } from "@/hooks/useRuns";
@@ -21,6 +23,7 @@ import {
   Route,
   ArrowLeft,
   Trash2,
+  Calendar,
 } from "lucide-react-native";
 import type { Activity } from "@/lib/types";
 
@@ -97,22 +100,28 @@ export default function HistoryScreen() {
           <SectionHeader title={`${allActivity.length} Activities`} />
 
           {loading ? (
-            <ActivityIndicator color="#8b5cf6" className="my-12" />
+            <>
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </>
           ) : allActivity.length === 0 ? (
-            <AnimatedCard className="items-center py-8">
-              <Text className="text-sm text-gray-400">
-                No activity recorded yet
-              </Text>
-            </AnimatedCard>
+            <EmptyState
+              icon={<Calendar size={28} color="#8b5cf6" />}
+              title="No History Yet"
+              subtitle="Your workouts and runs will appear here once you start training."
+              actionLabel="Start Training"
+              onAction={() => router.back()}
+            />
           ) : (
             allActivity.map((item, index) => {
               const isWorkout = item.type === "workout";
               const date = item.data.createdAt.toDate();
 
               return (
-                <TouchableOpacity
+                <PressableScale
                   key={item.data.id}
-                  activeOpacity={0.7}
                   onPress={() => handleTap(item)}
                 >
                   <AnimatedCard index={index} className="mb-3">
@@ -149,7 +158,7 @@ export default function HistoryScreen() {
                       </TouchableOpacity>
                     </View>
                   </AnimatedCard>
-                </TouchableOpacity>
+                </PressableScale>
               );
             })
           )}
