@@ -12,6 +12,8 @@ import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { PRCelebration } from "@/components/PRCelebration";
 import { RestTimer } from "@/components/RestTimer";
+import { WorkoutTimer } from "@/components/WorkoutTimer";
+import { WorkoutSummaryModal, type WorkoutSummary } from "@/components/WorkoutSummaryModal";
 import { useWorkouts } from "@/hooks/useWorkouts";
 import { useTemplates } from "@/hooks/useTemplates";
 import { usePersonalRecords } from "@/hooks/usePersonalRecords";
@@ -59,6 +61,7 @@ export default function LogScreen() {
     exercise: string;
     weight: number;
   } | null>(null);
+  const [workoutSummary, setWorkoutSummary] = useState<WorkoutSummary | null>(null);
   const startTime = useRef(Date.now());
 
   function loadTemplate(template: { name: string; exercises: { name: string; defaultSets: number }[] }) {
@@ -188,13 +191,17 @@ export default function LogScreen() {
       );
 
       // Check for PRs
+      let newPRs = 0;
       for (const ex of firestoreExercises) {
         for (const set of ex.sets) {
           if (set.weight > 0) {
             const isPR = await checkAndSavePR(ex.name, set.weight, set.reps);
             if (isPR) {
-              haptics.heavyTap();
-              setPrCelebration({ exercise: ex.name, weight: set.weight });
+              newPRs++;
+              if (newPRs === 1) {
+                haptics.heavyTap();
+                setPrCelebration({ exercise: ex.name, weight: set.weight });
+              }
               break;
             }
           }
@@ -205,11 +212,22 @@ export default function LogScreen() {
         (sum, ex) => sum + ex.sets.length,
         0,
       );
-      haptics.success();
-      Alert.alert(
-        "Workout Saved",
-        `${exercises.length} exercises, ${totalSets} sets logged!`,
+      const totalVolume = firestoreExercises.reduce(
+        (sum, ex) =>
+          sum + ex.sets.reduce((s, set) => s + set.weight * set.reps, 0),
+        0,
       );
+      haptics.success();
+
+      setWorkoutSummary({
+        name: workoutName || "Untitled Workout",
+        exerciseCount: exercises.length,
+        totalSets,
+        totalVolume,
+        durationMinutes,
+        newPRs,
+      });
+
       setExercises([]);
       setWorkoutName("");
       setWorkoutNotes("");
@@ -231,7 +249,11 @@ export default function LogScreen() {
               Track your lifts set by set
             </Text>
           </View>
-          <Dumbbell size={24} color="#8b5cf6" />
+          {exercises.length > 0 ? (
+            <WorkoutTimer active={exercises.length > 0} />
+          ) : (
+            <Dumbbell size={24} color="#8b5cf6" />
+          )}
         </View>
 
         {/* Saved Templates */}
@@ -506,6 +528,12 @@ export default function LogScreen() {
         weight={prCelebration?.weight ?? 0}
         visible={prCelebration !== null}
         onDone={() => setPrCelebration(null)}
+      />
+
+      <WorkoutSummaryModal
+        visible={workoutSummary !== null}
+        summary={workoutSummary}
+        onClose={() => setWorkoutSummary(null)}
       />
     </SafeAreaView>
   );

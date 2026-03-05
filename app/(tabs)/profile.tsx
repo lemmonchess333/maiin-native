@@ -15,6 +15,7 @@ import { StatBadge } from "@/components/StatBadge";
 import { Skeleton, SkeletonStatRow } from "@/components/Skeleton";
 import { WeeklyChart } from "@/components/WeeklyChart";
 import { BodyWeightChart } from "@/components/BodyWeightChart";
+import { CalendarHeatmap } from "@/components/CalendarHeatmap";
 import { AchievementGrid } from "@/components/AchievementGrid";
 import { useProfile } from "@/hooks/useProfile";
 import { useWorkouts } from "@/hooks/useWorkouts";
@@ -116,6 +117,12 @@ export default function ProfileScreen() {
         <SectionHeader title="This Week" />
         <Card className="mb-5">
           <WeeklyChart workouts={workouts} runs={runs} />
+        </Card>
+
+        {/* Activity Calendar */}
+        <SectionHeader title="Activity" />
+        <Card className="mb-5">
+          <CalendarHeatmap workouts={workouts} runs={runs} />
         </Card>
 
         {/* Body Weight */}

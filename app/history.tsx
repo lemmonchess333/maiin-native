@@ -4,6 +4,7 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
+  Alert,
   RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -74,13 +75,27 @@ export default function HistoryScreen() {
     setSelectedActivity(null);
   }, []);
 
-  async function handleDelete(item: Activity) {
+  function handleDelete(item: Activity) {
     haptics.warning();
-    if (item.type === "workout") {
-      await deleteWorkout(item.data.id);
-    } else {
-      await deleteRun(item.data.id);
-    }
+    const label = item.type === "workout" ? "workout" : "run";
+    Alert.alert(
+      `Delete ${label}?`,
+      "This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            if (item.type === "workout") {
+              await deleteWorkout(item.data.id);
+            } else {
+              await deleteRun(item.data.id);
+            }
+          },
+        },
+      ],
+    );
   }
 
   const [refreshing, setRefreshing] = useState(false);
