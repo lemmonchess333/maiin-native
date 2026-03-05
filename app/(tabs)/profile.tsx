@@ -1,14 +1,16 @@
-import { View, Text, ScrollView, Alert } from "react-native";
+import { View, Text, ScrollView, Alert, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/lib/auth-context";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { SectionHeader } from "@/components/SectionHeader";
 import { StatBadge } from "@/components/StatBadge";
+import { useProfile } from "@/hooks/useProfile";
 import { User, Award, Calendar, Settings } from "lucide-react-native";
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
+  const { profile, loading } = useProfile();
 
   function handleSignOut() {
     Alert.alert("Sign Out", "Are you sure?", [
@@ -19,6 +21,14 @@ export default function ProfileScreen() {
         onPress: () => signOut(),
       },
     ]);
+  }
+
+  if (loading) {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center bg-background">
+        <ActivityIndicator color="#8b5cf6" />
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -36,7 +46,7 @@ export default function ProfileScreen() {
             <User size={36} color="#8b5cf6" />
           </View>
           <Text className="text-lg font-bold text-white">
-            {user?.displayName ?? "Hybrid Athlete"}
+            {profile?.displayName || "Hybrid Athlete"}
           </Text>
           <Text className="text-sm text-gray-400">
             {user?.email ?? "Not signed in"}
@@ -46,9 +56,21 @@ export default function ProfileScreen() {
         {/* All-time Stats */}
         <SectionHeader title="All-Time Stats" />
         <Card className="mb-5 flex-row justify-around">
-          <StatBadge label="Workouts" value="127" color="brand" />
-          <StatBadge label="Miles" value="284" color="running" />
-          <StatBadge label="Max Streak" value="21d" color="success" />
+          <StatBadge
+            label="Workouts"
+            value={String(profile?.totalWorkouts ?? 0)}
+            color="brand"
+          />
+          <StatBadge
+            label="Miles"
+            value={String(Math.round(profile?.totalMiles ?? 0))}
+            color="running"
+          />
+          <StatBadge
+            label="Max Streak"
+            value={`${profile?.longestStreak ?? 0}d`}
+            color="success"
+          />
         </Card>
 
         {/* Achievements */}
@@ -60,10 +82,14 @@ export default function ProfileScreen() {
             </View>
             <View className="flex-1">
               <Text className="text-sm font-semibold text-white">
-                Century Club
+                {(profile?.totalWorkouts ?? 0) >= 100
+                  ? "Century Club"
+                  : "Getting Started"}
               </Text>
               <Text className="text-xs text-gray-400">
-                Logged 100+ workouts
+                {(profile?.totalWorkouts ?? 0) >= 100
+                  ? "Logged 100+ workouts"
+                  : `${profile?.totalWorkouts ?? 0}/100 workouts`}
               </Text>
             </View>
           </View>
@@ -81,8 +107,8 @@ export default function ProfileScreen() {
                 Member since
               </Text>
               <Text className="text-xs text-gray-400">
-                {user?.metadata?.creationTime
-                  ? new Date(user.metadata.creationTime).toLocaleDateString()
+                {profile?.createdAt
+                  ? profile.createdAt.toDate().toLocaleDateString()
                   : "—"}
               </Text>
             </View>

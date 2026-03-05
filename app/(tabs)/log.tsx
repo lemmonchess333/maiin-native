@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -10,18 +10,19 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
+import { useWorkouts } from "@/hooks/useWorkouts";
 import { Plus, Trash2, Dumbbell, Check } from "lucide-react-native";
 
-interface WorkoutSet {
+interface LocalSet {
   weight: string;
   reps: string;
   done: boolean;
 }
 
-interface Exercise {
+interface LocalExercise {
   id: string;
   name: string;
-  sets: WorkoutSet[];
+  sets: LocalSet[];
 }
 
 const TEMPLATES = [
@@ -38,11 +39,15 @@ const TEMPLATES = [
 ];
 
 export default function LogScreen() {
-  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const { saveWorkout } = useWorkouts();
+  const [exercises, setExercises] = useState<LocalExercise[]>([]);
   const [showTemplates, setShowTemplates] = useState(false);
   const [workoutName, setWorkoutName] = useState("");
+  const [saving, setSaving] = useState(false);
+  const startTime = useRef(Date.now());
 
   function addExercise(name: string) {
+    if (exercises.length === 0) startTime.current = Date.now();
     setExercises((prev) => [
       ...prev,
       {
@@ -71,7 +76,7 @@ export default function LogScreen() {
   function updateSet(
     exerciseId: string,
     setIndex: number,
-    field: keyof WorkoutSet,
+    field: keyof LocalSet,
     value: string | boolean,
   ) {
     setExercises((prev) =>
@@ -88,17 +93,44 @@ export default function LogScreen() {
     );
   }
 
-  function handleFinish() {
-    const totalSets = exercises.reduce(
-      (sum, ex) => sum + ex.sets.filter((s) => s.done).length,
-      0,
-    );
-    Alert.alert(
-      "Workout Complete",
-      `${exercises.length} exercises, ${totalSets} sets logged!`,
-    );
-    setExercises([]);
-    setWorkoutName("");
+  async function handleFinish() {
+    setSaving(true);
+    try {
+      const durationMinutes = Math.round(
+        (Date.now() - startTime.current) / 60000,
+      );
+      const firestoreExercises = exercises.map((ex) => ({
+        name: ex.name,
+        sets: ex.sets
+          .filter((s) => s.done)
+          .map((s) => ({
+            weight: Number(s.weight) || 0,
+            reps: Number(s.reps) || 0,
+            done: true,
+          })),
+      }));
+
+      await saveWorkout(
+        workoutName || "Untitled Workout",
+        firestoreExercises,
+        durationMinutes,
+      );
+
+      const totalSets = firestoreExercises.reduce(
+        (sum, ex) => sum + ex.sets.length,
+        0,
+      );
+      Alert.alert(
+        "Workout Saved",
+        `${exercises.length} exercises, ${totalSets} sets logged!`,
+      );
+      setExercises([]);
+      setWorkoutName("");
+    } catch (err: any) {
+      Alert.alert("Error", err.message ?? "Failed to save workout");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -222,6 +254,7 @@ export default function LogScreen() {
         {exercises.length > 0 && (
           <Button
             title="Finish Workout"
+            loading={saving}
             className="mb-8"
             onPress={handleFinish}
           />

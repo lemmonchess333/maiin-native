@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card } from "@/components/Card";
 import { StatBadge } from "@/components/StatBadge";
+import { useRuns } from "@/hooks/useRuns";
 import {
   Play,
   Square,
@@ -14,9 +15,11 @@ import {
 type RunState = "idle" | "running" | "paused";
 
 export default function RunScreen() {
+  const { saveRun } = useRuns();
   const [state, setState] = useState<RunState>("idle");
   const [seconds, setSeconds] = useState(0);
   const [distance, setDistance] = useState(0);
+  const [saving, setSaving] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -62,7 +65,23 @@ export default function RunScreen() {
   function handleResume() {
     setState("running");
   }
-  function handleStop() {
+
+  async function handleStop() {
+    if (distance > 0.01) {
+      setSaving(true);
+      try {
+        const calories = Math.floor(distance * 100);
+        await saveRun(distance, seconds, calories);
+        Alert.alert(
+          "Run Saved",
+          `${distance.toFixed(2)} mi in ${formatTime(seconds)}`,
+        );
+      } catch (err: any) {
+        Alert.alert("Error", err.message ?? "Failed to save run");
+      } finally {
+        setSaving(false);
+      }
+    }
     setState("idle");
     setSeconds(0);
     setDistance(0);
@@ -128,6 +147,7 @@ export default function RunScreen() {
               <TouchableOpacity
                 className="h-16 w-16 items-center justify-center rounded-full bg-[#2A2A3A]"
                 onPress={handleStop}
+                disabled={saving}
               >
                 <Square size={24} color="#FF6B6B" fill="#FF6B6B" />
               </TouchableOpacity>
@@ -145,6 +165,7 @@ export default function RunScreen() {
               <TouchableOpacity
                 className="h-16 w-16 items-center justify-center rounded-full bg-[#2A2A3A]"
                 onPress={handleStop}
+                disabled={saving}
               >
                 <Square size={24} color="#FF6B6B" fill="#FF6B6B" />
               </TouchableOpacity>

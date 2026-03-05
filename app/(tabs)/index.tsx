@@ -1,19 +1,83 @@
-import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import { useMemo } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { Card } from "@/components/Card";
 import { SectionHeader } from "@/components/SectionHeader";
 import { StatBadge } from "@/components/StatBadge";
+import { useWorkouts } from "@/hooks/useWorkouts";
+import { useRuns } from "@/hooks/useRuns";
+import { useProfile } from "@/hooks/useProfile";
 import { Dumbbell, Route, TrendingUp } from "lucide-react-native";
+import type { Activity } from "@/lib/types";
+
+function timeAgo(date: Date): string {
+  const diffMs = Date.now() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return "Just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay === 1) return "Yesterday";
+  return `${diffDay}d ago`;
+}
 
 export default function HomeScreen() {
   const { user } = useAuth();
+  const router = useRouter();
+  const { workouts, loading: wLoading } = useWorkouts(10);
+  const { runs, loading: rLoading } = useRuns(10);
+  const { profile } = useProfile();
+
+  const loading = wLoading || rLoading;
 
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     month: "short",
     day: "numeric",
   });
+
+  // Merge workouts + runs into a single feed sorted by date
+  const recentActivity = useMemo<Activity[]>(() => {
+    const items: Activity[] = [
+      ...workouts.map((w) => ({ type: "workout" as const, data: w })),
+      ...runs.map((r) => ({ type: "run" as const, data: r })),
+    ];
+    items.sort(
+      (a, b) => b.data.createdAt.toMillis() - a.data.createdAt.toMillis(),
+    );
+    return items.slice(0, 5);
+  }, [workouts, runs]);
+
+  // Weekly stats (last 7 days)
+  const weeklyStats = useMemo(() => {
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const weekWorkouts = workouts.filter(
+      (w) => w.createdAt.toMillis() > weekAgo,
+    );
+    const weekRuns = runs.filter((r) => r.createdAt.toMillis() > weekAgo);
+    const totalMiles = weekRuns.reduce((s, r) => s + r.distanceMiles, 0);
+    return {
+      workoutCount: weekWorkouts.length + weekRuns.length,
+      miles: totalMiles.toFixed(1),
+      liftPct:
+        weekWorkouts.length + weekRuns.length > 0
+          ? Math.round(
+              (weekWorkouts.length /
+                (weekWorkouts.length + weekRuns.length)) *
+                100,
+            )
+          : 50,
+    };
+  }, [workouts, runs]);
 
   return (
     <SafeAreaView className="flex-1 bg-background">
@@ -22,29 +86,43 @@ export default function HomeScreen() {
         <View className="mb-6 mt-2">
           <Text className="text-base text-gray-400">{today}</Text>
           <Text className="mt-1 text-2xl font-bold text-white">
-            Welcome back{user?.displayName ? `, ${user.displayName}` : ""}
+            Welcome back
+            {profile?.displayName ? `, ${profile.displayName}` : ""}
           </Text>
         </View>
 
         {/* Weekly Stats */}
         <SectionHeader title="This Week" />
         <Card className="mb-5 flex-row justify-around">
-          <StatBadge label="Workouts" value="4" color="brand" />
-          <StatBadge label="Miles" value="12.3" color="running" />
-          <StatBadge label="Calories" value="2,840" color="warning" />
-          <StatBadge label="Streak" value="6d" color="success" />
+          <StatBadge
+            label="Workouts"
+            value={String(weeklyStats.workoutCount)}
+            color="brand"
+          />
+          <StatBadge label="Miles" value={weeklyStats.miles} color="running" />
+          <StatBadge
+            label="Streak"
+            value={`${profile?.currentStreak ?? 0}d`}
+            color="success"
+          />
         </Card>
 
         {/* Quick Actions */}
         <SectionHeader title="Quick Start" />
         <View className="mb-5 flex-row gap-3">
-          <TouchableOpacity className="flex-1 items-center rounded-2xl bg-brand/20 py-5">
+          <TouchableOpacity
+            className="flex-1 items-center rounded-2xl bg-brand/20 py-5"
+            onPress={() => router.push("/log")}
+          >
             <Dumbbell size={28} color="#8b5cf6" />
             <Text className="mt-2 text-sm font-semibold text-brand">
               Log Lift
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity className="flex-1 items-center rounded-2xl bg-running/20 py-5">
+          <TouchableOpacity
+            className="flex-1 items-center rounded-2xl bg-running/20 py-5"
+            onPress={() => router.push("/run")}
+          >
             <Route size={28} color="#FF6B6B" />
             <Text className="mt-2 text-sm font-semibold text-running">
               Start Run
@@ -53,58 +131,52 @@ export default function HomeScreen() {
         </View>
 
         {/* Recent Activity */}
-        <SectionHeader title="Recent Activity" action="View All" />
+        <SectionHeader title="Recent Activity" />
 
-        <Card className="mb-3">
-          <View className="flex-row items-center">
-            <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-brand/20">
-              <Dumbbell size={18} color="#8b5cf6" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-sm font-semibold text-white">
-                Upper Body Push
-              </Text>
-              <Text className="text-xs text-gray-400">
-                Bench, OHP, Triceps — 52 min
-              </Text>
-            </View>
-            <Text className="text-xs text-gray-500">Today</Text>
-          </View>
-        </Card>
-
-        <Card className="mb-3">
-          <View className="flex-row items-center">
-            <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-running/20">
-              <Route size={18} color="#FF6B6B" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-sm font-semibold text-white">
-                Easy Run
-              </Text>
-              <Text className="text-xs text-gray-400">
-                3.1 mi — 28:42 — 9:15/mi
-              </Text>
-            </View>
-            <Text className="text-xs text-gray-500">Yesterday</Text>
-          </View>
-        </Card>
-
-        <Card className="mb-3">
-          <View className="flex-row items-center">
-            <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-brand/20">
-              <Dumbbell size={18} color="#8b5cf6" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-sm font-semibold text-white">
-                Lower Body
-              </Text>
-              <Text className="text-xs text-gray-400">
-                Squat, RDL, Lunges — 48 min
-              </Text>
-            </View>
-            <Text className="text-xs text-gray-500">2d ago</Text>
-          </View>
-        </Card>
+        {loading ? (
+          <ActivityIndicator color="#8b5cf6" className="my-8" />
+        ) : recentActivity.length === 0 ? (
+          <Card className="mb-3 items-center py-6">
+            <Text className="text-sm text-gray-400">
+              No workouts yet — start one above!
+            </Text>
+          </Card>
+        ) : (
+          recentActivity.map((item) => {
+            const isWorkout = item.type === "workout";
+            const created = item.data.createdAt.toDate();
+            return (
+              <Card key={item.data.id} className="mb-3">
+                <View className="flex-row items-center">
+                  <View
+                    className={`mr-3 h-10 w-10 items-center justify-center rounded-full ${
+                      isWorkout ? "bg-brand/20" : "bg-running/20"
+                    }`}
+                  >
+                    {isWorkout ? (
+                      <Dumbbell size={18} color="#8b5cf6" />
+                    ) : (
+                      <Route size={18} color="#FF6B6B" />
+                    )}
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-sm font-semibold text-white">
+                      {isWorkout ? item.data.name : "Run"}
+                    </Text>
+                    <Text className="text-xs text-gray-400">
+                      {isWorkout
+                        ? `${item.data.exercises.length} exercises — ${item.data.durationMinutes} min`
+                        : `${item.data.distanceMiles.toFixed(1)} mi — ${item.data.pacePerMile}/mi`}
+                    </Text>
+                  </View>
+                  <Text className="text-xs text-gray-500">
+                    {timeAgo(created)}
+                  </Text>
+                </View>
+              </Card>
+            );
+          })
+        )}
 
         {/* Training Load */}
         <SectionHeader title="Training Load" />
@@ -113,16 +185,27 @@ export default function HomeScreen() {
             <View className="flex-row items-center">
               <TrendingUp size={18} color="#34d399" />
               <Text className="ml-2 text-sm font-medium text-white">
-                Balanced
+                {weeklyStats.liftPct >= 40 && weeklyStats.liftPct <= 60
+                  ? "Balanced"
+                  : weeklyStats.liftPct > 60
+                    ? "Lift-heavy"
+                    : "Run-heavy"}
               </Text>
             </View>
             <Text className="text-xs text-gray-400">
-              60% lifting · 40% running
+              {weeklyStats.liftPct}% lifting · {100 - weeklyStats.liftPct}%
+              running
             </Text>
           </View>
           <View className="mt-3 h-2 flex-row overflow-hidden rounded-full">
-            <View className="w-[60%] bg-brand" />
-            <View className="w-[40%] bg-running" />
+            <View
+              style={{ width: `${weeklyStats.liftPct}%` }}
+              className="bg-brand"
+            />
+            <View
+              style={{ width: `${100 - weeklyStats.liftPct}%` }}
+              className="bg-running"
+            />
           </View>
         </Card>
       </ScrollView>
