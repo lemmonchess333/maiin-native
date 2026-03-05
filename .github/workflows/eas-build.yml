@@ -47,7 +47,7 @@ jobs:
 
   build-ios:
     name: Build iOS (Preview)
-    needs: lint-and-typecheck
+    needs: build-android
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
