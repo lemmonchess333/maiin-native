@@ -11,8 +11,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { useWorkouts } from "@/hooks/useWorkouts";
+import { useTemplates } from "@/hooks/useTemplates";
 import * as haptics from "@/lib/haptics";
-import { Plus, Trash2, Dumbbell, Check } from "lucide-react-native";
+import { Plus, Trash2, Dumbbell, Check, Bookmark, BookmarkPlus } from "lucide-react-native";
 
 interface LocalSet {
   weight: string;
@@ -41,11 +42,39 @@ const TEMPLATES = [
 
 export default function LogScreen() {
   const { saveWorkout } = useWorkouts();
+  const { templates: savedTemplates, saveTemplate } = useTemplates();
   const [exercises, setExercises] = useState<LocalExercise[]>([]);
   const [showTemplates, setShowTemplates] = useState(false);
   const [workoutName, setWorkoutName] = useState("");
   const [saving, setSaving] = useState(false);
   const startTime = useRef(Date.now());
+
+  function loadTemplate(template: { name: string; exercises: { name: string; defaultSets: number }[] }) {
+    haptics.mediumTap();
+    setWorkoutName(template.name);
+    setExercises(
+      template.exercises.map((ex, i) => ({
+        id: `${Date.now()}-${i}`,
+        name: ex.name,
+        sets: Array.from({ length: ex.defaultSets }, () => ({
+          weight: "",
+          reps: "",
+          done: false,
+        })),
+      })),
+    );
+  }
+
+  async function handleSaveAsTemplate() {
+    if (exercises.length === 0) return;
+    haptics.lightTap();
+    const templateExercises = exercises.map((ex) => ({
+      name: ex.name,
+      defaultSets: ex.sets.length,
+    }));
+    await saveTemplate(workoutName || "My Template", templateExercises);
+    Alert.alert("Template Saved", `"${workoutName || "My Template"}" saved for quick access.`);
+  }
 
   function addExercise(name: string) {
     haptics.selection();
@@ -149,6 +178,38 @@ export default function LogScreen() {
           </View>
           <Dumbbell size={24} color="#8b5cf6" />
         </View>
+
+        {/* Saved Templates */}
+        {exercises.length === 0 && savedTemplates.length > 0 && (
+          <>
+            <View className="mb-3 flex-row items-center">
+              <Bookmark size={14} color="#8b5cf6" />
+              <Text className="ml-1 text-sm font-semibold text-brand">
+                My Templates
+              </Text>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              className="mb-4"
+            >
+              {savedTemplates.map((t) => (
+                <TouchableOpacity
+                  key={t.id}
+                  className="mr-3 rounded-xl bg-[#1A1A24] px-4 py-3"
+                  onPress={() => loadTemplate(t)}
+                >
+                  <Text className="text-sm font-semibold text-white">
+                    {t.name}
+                  </Text>
+                  <Text className="text-xs text-gray-500">
+                    {t.exercises.length} exercises
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </>
+        )}
 
         {/* Workout Name */}
         <TextInput
@@ -254,14 +315,24 @@ export default function LogScreen() {
           />
         )}
 
-        {/* Finish Button */}
+        {/* Actions */}
         {exercises.length > 0 && (
-          <Button
-            title="Finish Workout"
-            loading={saving}
-            className="mb-8"
-            onPress={handleFinish}
-          />
+          <View className="mb-8">
+            <Button
+              title="Finish Workout"
+              loading={saving}
+              onPress={handleFinish}
+            />
+            <TouchableOpacity
+              className="mt-3 flex-row items-center justify-center py-2"
+              onPress={handleSaveAsTemplate}
+            >
+              <BookmarkPlus size={16} color="#8b5cf6" />
+              <Text className="ml-2 text-sm text-brand">
+                Save as Template
+              </Text>
+            </TouchableOpacity>
+          </View>
         )}
 
         <View className="h-4" />

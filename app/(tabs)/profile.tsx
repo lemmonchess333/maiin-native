@@ -1,5 +1,13 @@
-import { View, Text, ScrollView, Alert, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+  TouchableOpacity,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
@@ -9,10 +17,11 @@ import { WeeklyChart } from "@/components/WeeklyChart";
 import { useProfile } from "@/hooks/useProfile";
 import { useWorkouts } from "@/hooks/useWorkouts";
 import { useRuns } from "@/hooks/useRuns";
-import { User, Award, Calendar, Settings } from "lucide-react-native";
+import { User, Award, Calendar, Settings, Pencil } from "lucide-react-native";
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
+  const router = useRouter();
   const { profile, loading } = useProfile();
   const { workouts } = useWorkouts(50);
   const { runs } = useRuns(50);
@@ -42,13 +51,24 @@ export default function ProfileScreen() {
         {/* Header */}
         <View className="mb-6 mt-2 flex-row items-center justify-between">
           <Text className="text-2xl font-bold text-white">Profile</Text>
-          <Settings size={22} color="#6B7280" />
+          <TouchableOpacity onPress={() => router.push("/settings")}>
+            <Settings size={22} color="#6B7280" />
+          </TouchableOpacity>
         </View>
 
         {/* Avatar + Info */}
-        <View className="mb-6 items-center">
-          <View className="mb-3 h-20 w-20 items-center justify-center rounded-full bg-brand/20">
-            <User size={36} color="#8b5cf6" />
+        <TouchableOpacity
+          className="mb-6 items-center"
+          onPress={() => router.push("/edit-profile")}
+          activeOpacity={0.7}
+        >
+          <View className="mb-3">
+            <View className="h-20 w-20 items-center justify-center rounded-full bg-brand/20">
+              <User size={36} color="#8b5cf6" />
+            </View>
+            <View className="absolute -bottom-1 -right-1 h-7 w-7 items-center justify-center rounded-full bg-brand">
+              <Pencil size={12} color="#fff" />
+            </View>
           </View>
           <Text className="text-lg font-bold text-white">
             {profile?.displayName || "Hybrid Athlete"}
@@ -56,7 +76,7 @@ export default function ProfileScreen() {
           <Text className="text-sm text-gray-400">
             {user?.email ?? "Not signed in"}
           </Text>
-        </View>
+        </TouchableOpacity>
 
         {/* All-time Stats */}
         <SectionHeader title="All-Time Stats" />

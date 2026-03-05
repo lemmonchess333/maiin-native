@@ -54,6 +54,16 @@ export interface UserProfile {
   createdAt: Timestamp;
 }
 
+// ── Workout Template ──────────────────────────────────────
+
+export interface WorkoutTemplate {
+  id: string;
+  userId: string;
+  name: string;
+  exercises: { name: string; defaultSets: number }[];
+  createdAt: Timestamp;
+}
+
 // ── Activity (union for feed) ──────────────────────────────
 
 export type Activity =
