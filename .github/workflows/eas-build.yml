@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, claude/**]
+    branches: [main]
   pull_request:
     branches: [main]
 
@@ -18,7 +18,7 @@ jobs:
           node-version: 20
           cache: npm
 
-      - run: npm ci
+      - run: npm install
 
       - name: TypeScript check
         run: npx tsc --noEmit
