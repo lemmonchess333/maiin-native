@@ -17,7 +17,8 @@
       "bundleIdentifier": "com.maiin.native",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Maiin uses your location to track running routes and distance.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Maiin uses background location to track your run even when the app is in the background."
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Maiin uses background location to track your run even when the app is in the background.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
