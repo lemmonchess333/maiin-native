@@ -50,7 +50,8 @@
           "locationAlwaysAndWhenInUsePermission": "Maiin uses your location to track running routes.",
           "isAndroidBackgroundLocationEnabled": true
         }
-      ]
+      ],
+      "@maplibre/maplibre-react-native"
     ],
     "experiments": {
       "typedRoutes": true
