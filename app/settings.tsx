@@ -3,6 +3,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Card } from "@/components/Card";
 import { SectionHeader } from "@/components/SectionHeader";
+import { useWorkouts } from "@/hooks/useWorkouts";
+import { useRuns } from "@/hooks/useRuns";
+import { exportWorkoutsCSV, exportRunsCSV } from "@/lib/export";
 import * as haptics from "@/lib/haptics";
 import {
   ArrowLeft,
@@ -11,6 +14,7 @@ import {
   Info,
   ChevronRight,
   Shield,
+  Download,
 } from "lucide-react-native";
 import { useState } from "react";
 
@@ -40,6 +44,8 @@ function SettingRow({ icon, label, right, onPress }: SettingRowProps) {
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { workouts } = useWorkouts(200);
+  const { runs } = useRuns(200);
   const [notifications, setNotifications] = useState(true);
   const [useKm, setUseKm] = useState(false);
 
@@ -100,6 +106,28 @@ export default function SettingsScreen() {
             icon={<Shield size={16} color="#f59e0b" />}
             label="Privacy Policy"
             onPress={() => {}}
+          />
+        </Card>
+
+        {/* Data Export */}
+        <SectionHeader title="Data" />
+        <Card className="mb-5">
+          <SettingRow
+            icon={<Download size={16} color="#34d399" />}
+            label="Export Workouts (CSV)"
+            onPress={() => {
+              haptics.lightTap();
+              exportWorkoutsCSV(workouts);
+            }}
+          />
+          <View className="border-b border-[#2A2A3A]" />
+          <SettingRow
+            icon={<Download size={16} color="#FF6B6B" />}
+            label="Export Runs (CSV)"
+            onPress={() => {
+              haptics.lightTap();
+              exportRunsCSV(runs);
+            }}
           />
         </Card>
 

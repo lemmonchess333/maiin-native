@@ -1,6 +1,9 @@
 import { useCallback, useMemo, forwardRef } from "react";
-import { View, Text } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import { Share2 } from "lucide-react-native";
+import { shareActivity } from "@/lib/share";
+import { computeSplits } from "@/lib/splits";
 import type { Workout, Run } from "@/lib/types";
 import type { Activity } from "@/lib/types";
 
@@ -45,10 +48,20 @@ export const WorkoutDetailSheet = forwardRef<BottomSheet, WorkoutDetailSheetProp
           contentContainerStyle={{ padding: 20 }}
         >
           {/* Header */}
-          <Text className="text-xl font-bold text-white">
-            {isWorkout ? activity.data.name : "Run"}
-          </Text>
-          <Text className="mt-1 text-sm text-gray-400">{date}</Text>
+          <View className="flex-row items-start justify-between">
+            <View className="flex-1">
+              <Text className="text-xl font-bold text-white">
+                {isWorkout ? activity.data.name : "Run"}
+              </Text>
+              <Text className="mt-1 text-sm text-gray-400">{date}</Text>
+            </View>
+            <TouchableOpacity
+              className="h-9 w-9 items-center justify-center rounded-full bg-[#0F0F14]"
+              onPress={() => shareActivity(activity.type, activity.data)}
+            >
+              <Share2 size={16} color="#8b5cf6" />
+            </TouchableOpacity>
+          </View>
 
           {isWorkout ? (
             <WorkoutDetail workout={activity.data} />
@@ -147,6 +160,7 @@ function RunDetail({ run }: { run: Run }) {
   const minutes = Math.floor(run.durationSeconds / 60);
   const secs = run.durationSeconds % 60;
   const duration = `${minutes}:${String(secs).padStart(2, "0")}`;
+  const splits = computeSplits(run.route);
 
   return (
     <View className="mt-4">
@@ -174,6 +188,41 @@ function RunDetail({ run }: { run: Run }) {
           <Text className="text-xs text-gray-400">Calories</Text>
         </View>
       </View>
+
+      {/* Splits */}
+      {splits.length > 0 && (
+        <View className="mb-4">
+          <Text className="mb-2 text-sm font-semibold text-white">
+            Mile Splits
+          </Text>
+          <View className="mb-1 flex-row">
+            <Text className="w-16 text-xs text-gray-500">MILE</Text>
+            <Text className="flex-1 text-center text-xs text-gray-500">
+              TIME
+            </Text>
+            <Text className="flex-1 text-center text-xs text-gray-500">
+              PACE
+            </Text>
+          </View>
+          {splits.map((split) => {
+            const m = Math.floor(split.timeSeconds / 60);
+            const s = split.timeSeconds % 60;
+            return (
+              <View key={split.mile} className="flex-row py-1.5">
+                <Text className="w-16 text-sm text-gray-400">
+                  {split.mile}
+                </Text>
+                <Text className="flex-1 text-center text-sm text-white">
+                  {m}:{String(s).padStart(2, "0")}
+                </Text>
+                <Text className="flex-1 text-center text-sm text-teal">
+                  {split.pace}/mi
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      )}
 
       {run.route.length > 0 && (
         <Text className="text-sm text-gray-400">
