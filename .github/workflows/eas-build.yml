@@ -1,4 +1,4 @@
-name: EAS Build
+name: CI
 
 on:
   push:
@@ -22,47 +22,3 @@ jobs:
 
       - name: TypeScript check
         run: npx tsc --noEmit
-
-  build-android:
-    name: Build Android (Preview)
-    needs: lint-and-typecheck
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
-      - run: npm ci
-
-      - name: Build Android preview
-        run: eas build --platform android --profile preview --non-interactive
-
-  build-ios:
-    name: Build iOS (Preview)
-    needs: lint-and-typecheck
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
-      - run: npm ci
-
-      - name: Build iOS preview
-        run: eas build --platform ios --profile preview --non-interactive
