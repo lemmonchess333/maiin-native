@@ -74,6 +74,16 @@ function WorkoutDetail({ workout }: { workout: Workout }) {
 
   return (
     <View className="mt-4">
+      {/* Notes */}
+      {workout.notes ? (
+        <View className="mb-4 rounded-xl bg-[#0F0F14] p-3">
+          <Text className="mb-1 text-xs font-semibold text-gray-500">
+            NOTES
+          </Text>
+          <Text className="text-sm text-gray-300">{workout.notes}</Text>
+        </View>
+      ) : null}
+
       {/* Summary */}
       <View className="mb-4 flex-row justify-around rounded-xl bg-[#0F0F14] py-3">
         <View className="items-center">

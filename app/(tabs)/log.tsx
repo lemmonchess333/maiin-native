@@ -11,11 +11,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { PRCelebration } from "@/components/PRCelebration";
+import { RestTimer } from "@/components/RestTimer";
 import { useWorkouts } from "@/hooks/useWorkouts";
 import { useTemplates } from "@/hooks/useTemplates";
 import { usePersonalRecords } from "@/hooks/usePersonalRecords";
 import * as haptics from "@/lib/haptics";
-import { Plus, Trash2, Dumbbell, Check, Bookmark, BookmarkPlus, Trophy } from "lucide-react-native";
+import { Plus, Trash2, Dumbbell, Check, Bookmark, BookmarkPlus, Trophy, Timer, Search } from "lucide-react-native";
 
 interface LocalSet {
   weight: string;
@@ -51,6 +52,8 @@ export default function LogScreen() {
   const [workoutName, setWorkoutName] = useState("");
   const [workoutNotes, setWorkoutNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [showRestTimer, setShowRestTimer] = useState(false);
+  const [exerciseSearch, setExerciseSearch] = useState("");
   const [prCelebration, setPrCelebration] = useState<{
     exercise: string;
     weight: number;
@@ -255,6 +258,24 @@ export default function LogScreen() {
           textAlignVertical="top"
         />
 
+        {/* Rest Timer Toggle */}
+        {exercises.length > 0 && (
+          <TouchableOpacity
+            className="mb-4 flex-row items-center justify-center rounded-xl bg-teal/10 py-2"
+            onPress={() => setShowRestTimer(!showRestTimer)}
+          >
+            <Timer size={14} color="#2dd4bf" />
+            <Text className="ml-2 text-sm font-medium text-teal">
+              {showRestTimer ? "Hide Timer" : "Rest Timer"}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        <RestTimer
+          visible={showRestTimer}
+          onClose={() => setShowRestTimer(false)}
+        />
+
         {/* Exercises */}
         {exercises.map((exercise) => {
           const currentPR = getPR(exercise.name);
@@ -344,15 +365,50 @@ export default function LogScreen() {
             <Text className="mb-3 text-sm font-semibold text-white">
               Choose Exercise
             </Text>
-            {TEMPLATES.map((name) => (
+            {/* Search */}
+            <View className="mb-3 flex-row items-center rounded-lg bg-[#0F0F14] px-3">
+              <Search size={14} color="#6B7280" />
+              <TextInput
+                className="ml-2 h-9 flex-1 text-sm text-white"
+                placeholder="Search exercises..."
+                placeholderTextColor="#6B7280"
+                value={exerciseSearch}
+                onChangeText={setExerciseSearch}
+                autoFocus
+              />
+            </View>
+            {TEMPLATES.filter((n) =>
+              n.toLowerCase().includes(exerciseSearch.toLowerCase()),
+            ).map((name) => (
               <TouchableOpacity
                 key={name}
                 className="border-b border-[#2A2A3A] py-3"
-                onPress={() => addExercise(name)}
+                onPress={() => {
+                  addExercise(name);
+                  setExerciseSearch("");
+                }}
               >
                 <Text className="text-sm text-gray-300">{name}</Text>
               </TouchableOpacity>
             ))}
+            {/* Custom exercise */}
+            {exerciseSearch.trim().length > 0 &&
+              !TEMPLATES.some(
+                (n) => n.toLowerCase() === exerciseSearch.toLowerCase(),
+              ) && (
+                <TouchableOpacity
+                  className="mt-2 flex-row items-center py-3"
+                  onPress={() => {
+                    addExercise(exerciseSearch.trim());
+                    setExerciseSearch("");
+                  }}
+                >
+                  <Plus size={14} color="#8b5cf6" />
+                  <Text className="ml-2 text-sm text-brand">
+                    Add "{exerciseSearch.trim()}"
+                  </Text>
+                </TouchableOpacity>
+              )}
           </Card>
         ) : (
           <Button
