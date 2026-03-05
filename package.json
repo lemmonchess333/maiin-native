@@ -15,7 +15,7 @@
     "@react-navigation/native": "^7.1.28",
     "expo": "~55.0.5",
     "expo-constants": "~55.0.7",
-    "expo-dev-client": "~5.2.5",
+    "expo-dev-client": "~55.0.11",
     "expo-font": "~55.0.4",
     "expo-haptics": "^55.0.8",
     "expo-keep-awake": "^55.0.4",
