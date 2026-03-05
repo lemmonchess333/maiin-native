@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { View, Text, TouchableOpacity, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useKeepAwake } from "expo-keep-awake";
 import { Card } from "@/components/Card";
 import { StatBadge } from "@/components/StatBadge";
 import { useRuns } from "@/hooks/useRuns";
@@ -20,6 +21,8 @@ export default function RunScreen() {
   const { saveRun } = useRuns();
   const location = useLocation();
   const [state, setState] = useState<RunState>("idle");
+  // Keep screen awake during active run
+  useKeepAwake("run-tracking", { isActive: state !== "idle" });
   const [seconds, setSeconds] = useState(0);
   const [saving, setSaving] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);

@@ -9,10 +9,12 @@ import {
   addDoc,
   deleteDoc,
   doc,
+  increment,
   Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth-context";
+import { updateProfileStats } from "@/lib/profile-stats";
 import type { Run, GpsPoint } from "@/lib/types";
 
 const COL = "runs";
@@ -67,6 +69,11 @@ export function useRuns(maxResults = 20) {
         calories,
         route,
         createdAt: Timestamp.now(),
+      });
+      // Increment profile stats
+      await updateProfileStats(user.uid, {
+        totalRuns: increment(1),
+        totalMiles: increment(distanceMiles),
       });
     },
     [user],

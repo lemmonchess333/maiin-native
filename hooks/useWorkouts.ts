@@ -9,10 +9,12 @@ import {
   addDoc,
   deleteDoc,
   doc,
+  increment,
   Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth-context";
+import { updateProfileStats } from "@/lib/profile-stats";
 import type { Workout, WorkoutExercise } from "@/lib/types";
 
 const COL = "workouts";
@@ -54,6 +56,10 @@ export function useWorkouts(maxResults = 20) {
         exercises,
         durationMinutes,
         createdAt: Timestamp.now(),
+      });
+      // Increment profile stats
+      await updateProfileStats(user.uid, {
+        totalWorkouts: increment(1),
       });
     },
     [user],

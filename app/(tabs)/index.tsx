@@ -15,6 +15,7 @@ import { StatBadge } from "@/components/StatBadge";
 import { useWorkouts } from "@/hooks/useWorkouts";
 import { useRuns } from "@/hooks/useRuns";
 import { useProfile } from "@/hooks/useProfile";
+import { useStreakSync } from "@/hooks/useStreakSync";
 import { Dumbbell, Route, TrendingUp } from "lucide-react-native";
 import type { Activity } from "@/lib/types";
 
@@ -36,6 +37,9 @@ export default function HomeScreen() {
   const { workouts, loading: wLoading } = useWorkouts(10);
   const { runs, loading: rLoading } = useRuns(10);
   const { profile } = useProfile();
+
+  // Recalculate streak whenever activity data changes
+  useStreakSync(workouts, runs);
 
   const loading = wLoading || rLoading;
 
