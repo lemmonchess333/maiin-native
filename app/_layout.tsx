@@ -8,8 +8,11 @@ import "../global.css";
 
 import { AuthProvider } from "@/lib/auth-context";
 import { useAuthGate } from "@/hooks/useAuthGate";
+import { ErrorScreen } from "@/components/ErrorScreen";
 
-export { ErrorBoundary } from "expo-router";
+export function ErrorBoundary({ error, retry }: { error: Error; retry: () => void }) {
+  return <ErrorScreen error={error} retry={retry} />;
+}
 
 export const unstable_settings = {
   initialRouteName: "(tabs)",
@@ -29,6 +32,7 @@ function RootNav() {
     >
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="sign-in" options={{ animationTypeForReplace: "pop" }} />
+      <Stack.Screen name="welcome" options={{ animationTypeForReplace: "pop" }} />
       <Stack.Screen name="history" />
       <Stack.Screen name="settings" />
       <Stack.Screen name="edit-profile" />
