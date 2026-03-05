@@ -8,10 +8,12 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/Button";
 
 export default function SignInScreen() {
+  const router = useRouter();
   const { signIn, signUp } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -81,6 +83,15 @@ export default function SignInScreen() {
             className="mt-3"
             onPress={() => setIsSignUp(!isSignUp)}
           />
+
+          {!isSignUp && (
+            <Text
+              className="mt-4 text-center text-sm text-gray-400"
+              onPress={() => router.push("/forgot-password")}
+            >
+              Forgot password?
+            </Text>
+          )}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

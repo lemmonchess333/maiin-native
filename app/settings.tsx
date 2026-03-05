@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, Switch, Linking } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Switch } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Card } from "@/components/Card";
@@ -7,6 +7,7 @@ import { useWorkouts } from "@/hooks/useWorkouts";
 import { useRuns } from "@/hooks/useRuns";
 import { exportWorkoutsCSV, exportRunsCSV } from "@/lib/export";
 import * as haptics from "@/lib/haptics";
+import { useAuth } from "@/lib/auth-context";
 import {
   ArrowLeft,
   Bell,
@@ -15,8 +16,10 @@ import {
   ChevronRight,
   Shield,
   Download,
+  Lock,
 } from "lucide-react-native";
 import { useState } from "react";
+import { Alert, TextInput } from "react-native";
 
 interface SettingRowProps {
   icon: React.ReactNode;
@@ -46,8 +49,30 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { workouts } = useWorkouts(200);
   const { runs } = useRuns(200);
+  const { changePassword } = useAuth();
   const [notifications, setNotifications] = useState(true);
   const [useKm, setUseKm] = useState(false);
+
+  function handleChangePassword() {
+    Alert.prompt(
+      "Change Password",
+      "Enter your new password (min 6 characters)",
+      async (newPass) => {
+        if (!newPass || newPass.length < 6) {
+          Alert.alert("Error", "Password must be at least 6 characters");
+          return;
+        }
+        try {
+          await changePassword(newPass);
+          haptics.success();
+          Alert.alert("Success", "Password updated successfully");
+        } catch (err: any) {
+          Alert.alert("Error", err.message ?? "Failed to change password. You may need to re-authenticate.");
+        }
+      },
+      "secure-text",
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-background">
@@ -102,6 +127,12 @@ export default function SettingsScreen() {
         {/* Account */}
         <SectionHeader title="Account" />
         <Card className="mb-5">
+          <SettingRow
+            icon={<Lock size={16} color="#8b5cf6" />}
+            label="Change Password"
+            onPress={handleChangePassword}
+          />
+          <View className="border-b border-[#2A2A3A]" />
           <SettingRow
             icon={<Shield size={16} color="#f59e0b" />}
             label="Privacy Policy"

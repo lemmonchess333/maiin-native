@@ -9,6 +9,8 @@ import "../global.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { useAuthGate } from "@/hooks/useAuthGate";
 import { ErrorScreen } from "@/components/ErrorScreen";
+import { EmailVerificationBanner } from "@/components/EmailVerificationBanner";
+import { NetworkBanner } from "@/components/NetworkBanner";
 
 export function ErrorBoundary({ error, retry }: { error: Error; retry: () => void }) {
   return <ErrorScreen error={error} retry={retry} />;
@@ -36,6 +38,7 @@ function RootNav() {
       <Stack.Screen name="history" />
       <Stack.Screen name="settings" />
       <Stack.Screen name="edit-profile" />
+      <Stack.Screen name="forgot-password" />
       <Stack.Screen name="modal" options={{ presentation: "modal" }} />
     </Stack>
   );
@@ -63,6 +66,8 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <StatusBar style="light" />
+      <NetworkBanner />
+      <EmailVerificationBanner />
       <RootNav />
     </AuthProvider>
   );
