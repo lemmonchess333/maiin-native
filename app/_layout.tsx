@@ -29,6 +29,7 @@ function RootNav() {
     >
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="sign-in" options={{ animationTypeForReplace: "pop" }} />
+      <Stack.Screen name="history" />
       <Stack.Screen name="modal" options={{ presentation: "modal" }} />
     </Stack>
   );

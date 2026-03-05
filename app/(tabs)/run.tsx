@@ -4,6 +4,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Card } from "@/components/Card";
 import { StatBadge } from "@/components/StatBadge";
 import { useRuns } from "@/hooks/useRuns";
+import { useLocation } from "@/hooks/useLocation";
+import * as haptics from "@/lib/haptics";
 import {
   Play,
   Square,
@@ -16,17 +18,19 @@ type RunState = "idle" | "running" | "paused";
 
 export default function RunScreen() {
   const { saveRun } = useRuns();
+  const location = useLocation();
   const [state, setState] = useState<RunState>("idle");
   const [seconds, setSeconds] = useState(0);
-  const [distance, setDistance] = useState(0);
   const [saving, setSaving] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Use real GPS distance when tracking, otherwise 0
+  const distance = location.distanceMiles;
 
   useEffect(() => {
     if (state === "running") {
       intervalRef.current = setInterval(() => {
         setSeconds((s) => s + 1);
-        setDistance((d) => d + 0.002);
       }, 1000);
     } else {
       if (intervalRef.current) {
@@ -56,27 +60,40 @@ export default function RunScreen() {
     return `${m}:${String(s).padStart(2, "0")}`;
   }
 
-  function handleStart() {
+  async function handleStart() {
+    haptics.heavyTap();
+    await location.startTracking();
     setState("running");
   }
+
   function handlePause() {
+    haptics.mediumTap();
+    location.stopTracking();
     setState("paused");
   }
-  function handleResume() {
+
+  async function handleResume() {
+    haptics.mediumTap();
+    await location.startTracking();
     setState("running");
   }
 
   async function handleStop() {
+    haptics.heavyTap();
+    location.stopTracking();
+
     if (distance > 0.01) {
       setSaving(true);
       try {
         const calories = Math.floor(distance * 100);
-        await saveRun(distance, seconds, calories);
+        await saveRun(distance, seconds, calories, location.route);
+        haptics.success();
         Alert.alert(
           "Run Saved",
           `${distance.toFixed(2)} mi in ${formatTime(seconds)}`,
         );
       } catch (err: any) {
+        haptics.warning();
         Alert.alert("Error", err.message ?? "Failed to save run");
       } finally {
         setSaving(false);
@@ -84,7 +101,7 @@ export default function RunScreen() {
     }
     setState("idle");
     setSeconds(0);
-    setDistance(0);
+    location.reset();
   }
 
   return (
@@ -94,7 +111,9 @@ export default function RunScreen() {
         <View className="mb-6 mt-2 flex-row items-center justify-between">
           <View>
             <Text className="text-2xl font-bold text-white">Run</Text>
-            <Text className="text-sm text-gray-400">GPS tracking</Text>
+            <Text className="text-sm text-gray-400">
+              {location.error ?? "GPS tracking"}
+            </Text>
           </View>
           <Navigation size={24} color="#FF6B6B" />
         </View>
@@ -104,9 +123,14 @@ export default function RunScreen() {
           <MapPin size={32} color="#FF6B6B" />
           <Text className="mt-2 text-sm text-gray-400">
             {state === "idle"
-              ? "Map will appear when you start"
-              : "GPS tracking active"}
+              ? "Tap play to start GPS tracking"
+              : `Tracking · ${location.route.length} GPS points`}
           </Text>
+          {location.currentSpeed != null && state === "running" && (
+            <Text className="mt-1 text-xs text-running">
+              {location.currentSpeed.toFixed(1)} mph
+            </Text>
+          )}
         </Card>
 
         {/* Timer */}

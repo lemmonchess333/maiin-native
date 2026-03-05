@@ -131,7 +131,11 @@ export default function HomeScreen() {
         </View>
 
         {/* Recent Activity */}
-        <SectionHeader title="Recent Activity" />
+        <SectionHeader
+          title="Recent Activity"
+          action="View All"
+          onAction={() => router.push("/history")}
+        />
 
         {loading ? (
           <ActivityIndicator color="#8b5cf6" className="my-8" />

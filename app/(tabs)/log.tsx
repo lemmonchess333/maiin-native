@@ -11,6 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { useWorkouts } from "@/hooks/useWorkouts";
+import * as haptics from "@/lib/haptics";
 import { Plus, Trash2, Dumbbell, Check } from "lucide-react-native";
 
 interface LocalSet {
@@ -47,6 +48,7 @@ export default function LogScreen() {
   const startTime = useRef(Date.now());
 
   function addExercise(name: string) {
+    haptics.selection();
     if (exercises.length === 0) startTime.current = Date.now();
     setExercises((prev) => [
       ...prev,
@@ -120,6 +122,7 @@ export default function LogScreen() {
         (sum, ex) => sum + ex.sets.length,
         0,
       );
+      haptics.success();
       Alert.alert(
         "Workout Saved",
         `${exercises.length} exercises, ${totalSets} sets logged!`,
@@ -206,9 +209,10 @@ export default function LogScreen() {
                 />
                 <TouchableOpacity
                   className={`h-9 w-10 items-center justify-center rounded-lg ${set.done ? "bg-success" : "bg-background"}`}
-                  onPress={() =>
-                    updateSet(exercise.id, index, "done", !set.done)
-                  }
+                  onPress={() => {
+                    if (!set.done) haptics.lightTap();
+                    updateSet(exercise.id, index, "done", !set.done);
+                  }}
                 >
                   <Check size={16} color={set.done ? "#fff" : "#6B7280"} />
                 </TouchableOpacity>
