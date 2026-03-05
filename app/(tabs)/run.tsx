@@ -28,7 +28,7 @@ export default function RunScreen() {
   const [state, setState] = useState<RunState>("idle");
   const [audioCues, setAudioCues] = useState(true);
   // Keep screen awake during active run
-  useKeepAwake("run-tracking", { isActive: state !== "idle" });
+  useKeepAwake(state !== "idle" ? "run-tracking" : undefined);
   const [seconds, setSeconds] = useState(0);
   const [saving, setSaving] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
