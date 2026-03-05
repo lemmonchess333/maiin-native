@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef, useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -8,8 +8,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Card } from "@/components/Card";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import BottomSheet from "@gorhom/bottom-sheet";
+import { AnimatedCard } from "@/components/AnimatedCard";
 import { SectionHeader } from "@/components/SectionHeader";
+import { WorkoutDetailSheet } from "@/components/WorkoutDetailSheet";
 import { useWorkouts } from "@/hooks/useWorkouts";
 import { useRuns } from "@/hooks/useRuns";
 import * as haptics from "@/lib/haptics";
@@ -39,6 +42,10 @@ export default function HistoryScreen() {
   const router = useRouter();
   const { workouts, loading: wLoad, deleteWorkout } = useWorkouts(50);
   const { runs, loading: rLoad, deleteRun } = useRuns(50);
+  const bottomSheetRef = useRef<BottomSheet>(null);
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(
+    null,
+  );
 
   const loading = wLoad || rLoad;
 
@@ -53,6 +60,16 @@ export default function HistoryScreen() {
     return items;
   }, [workouts, runs]);
 
+  function handleTap(item: Activity) {
+    haptics.lightTap();
+    setSelectedActivity(item);
+    bottomSheetRef.current?.snapToIndex(0);
+  }
+
+  const handleCloseSheet = useCallback(() => {
+    setSelectedActivity(null);
+  }, []);
+
   async function handleDelete(item: Activity) {
     haptics.warning();
     if (item.type === "workout") {
@@ -63,75 +80,89 @@ export default function HistoryScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
-      <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View className="mb-4 mt-2 flex-row items-center">
-          <TouchableOpacity
-            className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-[#1A1A24]"
-            onPress={() => router.back()}
-          >
-            <ArrowLeft size={20} color="#fff" />
-          </TouchableOpacity>
-          <Text className="text-2xl font-bold text-white">History</Text>
-        </View>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaView className="flex-1 bg-background">
+        <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
+          {/* Header */}
+          <View className="mb-4 mt-2 flex-row items-center">
+            <TouchableOpacity
+              className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-[#1A1A24]"
+              onPress={() => router.back()}
+            >
+              <ArrowLeft size={20} color="#fff" />
+            </TouchableOpacity>
+            <Text className="text-2xl font-bold text-white">History</Text>
+          </View>
 
-        <SectionHeader title={`${allActivity.length} Activities`} />
+          <SectionHeader title={`${allActivity.length} Activities`} />
 
-        {loading ? (
-          <ActivityIndicator color="#8b5cf6" className="my-12" />
-        ) : allActivity.length === 0 ? (
-          <Card className="items-center py-8">
-            <Text className="text-sm text-gray-400">
-              No activity recorded yet
-            </Text>
-          </Card>
-        ) : (
-          allActivity.map((item) => {
-            const isWorkout = item.type === "workout";
-            const date = item.data.createdAt.toDate();
+          {loading ? (
+            <ActivityIndicator color="#8b5cf6" className="my-12" />
+          ) : allActivity.length === 0 ? (
+            <AnimatedCard className="items-center py-8">
+              <Text className="text-sm text-gray-400">
+                No activity recorded yet
+              </Text>
+            </AnimatedCard>
+          ) : (
+            allActivity.map((item, index) => {
+              const isWorkout = item.type === "workout";
+              const date = item.data.createdAt.toDate();
 
-            return (
-              <Card key={item.data.id} className="mb-3">
-                <View className="flex-row items-center">
-                  <View
-                    className={`mr-3 h-10 w-10 items-center justify-center rounded-full ${
-                      isWorkout ? "bg-brand/20" : "bg-running/20"
-                    }`}
-                  >
-                    {isWorkout ? (
-                      <Dumbbell size={18} color="#8b5cf6" />
-                    ) : (
-                      <Route size={18} color="#FF6B6B" />
-                    )}
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-sm font-semibold text-white">
-                      {isWorkout ? item.data.name : "Run"}
-                    </Text>
-                    <Text className="text-xs text-gray-400">
-                      {isWorkout
-                        ? `${item.data.exercises.length} exercises · ${item.data.durationMinutes} min`
-                        : `${item.data.distanceMiles.toFixed(2)} mi · ${formatDuration(item.data.durationSeconds)} · ${item.data.pacePerMile}/mi`}
-                    </Text>
-                    <Text className="mt-1 text-[10px] text-gray-500">
-                      {formatDate(date)}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    className="h-8 w-8 items-center justify-center"
-                    onPress={() => handleDelete(item)}
-                  >
-                    <Trash2 size={16} color="#6B7280" />
-                  </TouchableOpacity>
-                </View>
-              </Card>
-            );
-          })
-        )}
+              return (
+                <TouchableOpacity
+                  key={item.data.id}
+                  activeOpacity={0.7}
+                  onPress={() => handleTap(item)}
+                >
+                  <AnimatedCard index={index} className="mb-3">
+                    <View className="flex-row items-center">
+                      <View
+                        className={`mr-3 h-10 w-10 items-center justify-center rounded-full ${
+                          isWorkout ? "bg-brand/20" : "bg-running/20"
+                        }`}
+                      >
+                        {isWorkout ? (
+                          <Dumbbell size={18} color="#8b5cf6" />
+                        ) : (
+                          <Route size={18} color="#FF6B6B" />
+                        )}
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-sm font-semibold text-white">
+                          {isWorkout ? item.data.name : "Run"}
+                        </Text>
+                        <Text className="text-xs text-gray-400">
+                          {isWorkout
+                            ? `${item.data.exercises.length} exercises · ${item.data.durationMinutes} min`
+                            : `${item.data.distanceMiles.toFixed(2)} mi · ${formatDuration(item.data.durationSeconds)} · ${item.data.pacePerMile}/mi`}
+                        </Text>
+                        <Text className="mt-1 text-[10px] text-gray-500">
+                          {formatDate(date)}
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        className="h-8 w-8 items-center justify-center"
+                        onPress={() => handleDelete(item)}
+                      >
+                        <Trash2 size={16} color="#6B7280" />
+                      </TouchableOpacity>
+                    </View>
+                  </AnimatedCard>
+                </TouchableOpacity>
+              );
+            })
+          )}
 
-        <View className="h-8" />
-      </ScrollView>
-    </SafeAreaView>
+          <View className="h-8" />
+        </ScrollView>
+
+        <WorkoutDetailSheet
+          ref={bottomSheetRef}
+          activity={selectedActivity}
+          onClose={handleCloseSheet}
+        />
+      </SafeAreaView>
+    </GestureHandlerRootView>
   );
 }

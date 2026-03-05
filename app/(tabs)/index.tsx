@@ -10,6 +10,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { Card } from "@/components/Card";
+import { AnimatedCard } from "@/components/AnimatedCard";
 import { SectionHeader } from "@/components/SectionHeader";
 import { StatBadge } from "@/components/StatBadge";
 import { useWorkouts } from "@/hooks/useWorkouts";
@@ -150,11 +151,11 @@ export default function HomeScreen() {
             </Text>
           </Card>
         ) : (
-          recentActivity.map((item) => {
+          recentActivity.map((item, index) => {
             const isWorkout = item.type === "workout";
             const created = item.data.createdAt.toDate();
             return (
-              <Card key={item.data.id} className="mb-3">
+              <AnimatedCard key={item.data.id} index={index} className="mb-3">
                 <View className="flex-row items-center">
                   <View
                     className={`mr-3 h-10 w-10 items-center justify-center rounded-full ${
@@ -181,7 +182,7 @@ export default function HomeScreen() {
                     {timeAgo(created)}
                   </Text>
                 </View>
-              </Card>
+              </AnimatedCard>
             );
           })
         )}

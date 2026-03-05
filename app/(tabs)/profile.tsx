@@ -5,12 +5,17 @@ import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { SectionHeader } from "@/components/SectionHeader";
 import { StatBadge } from "@/components/StatBadge";
+import { WeeklyChart } from "@/components/WeeklyChart";
 import { useProfile } from "@/hooks/useProfile";
+import { useWorkouts } from "@/hooks/useWorkouts";
+import { useRuns } from "@/hooks/useRuns";
 import { User, Award, Calendar, Settings } from "lucide-react-native";
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const { profile, loading } = useProfile();
+  const { workouts } = useWorkouts(50);
+  const { runs } = useRuns(50);
 
   function handleSignOut() {
     Alert.alert("Sign Out", "Are you sure?", [
@@ -71,6 +76,12 @@ export default function ProfileScreen() {
             value={`${profile?.longestStreak ?? 0}d`}
             color="success"
           />
+        </Card>
+
+        {/* Weekly Chart */}
+        <SectionHeader title="This Week" />
+        <Card className="mb-5">
+          <WeeklyChart workouts={workouts} runs={runs} />
         </Card>
 
         {/* Achievements */}
