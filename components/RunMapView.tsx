@@ -1,6 +1,12 @@
 import { useMemo } from "react";
 import { View, Text } from "react-native";
-import MapLibreGL from "@maplibre/maplibre-react-native";
+import {
+  Map,
+  Camera,
+  GeoJSONSource,
+  Layer,
+  ViewAnnotation,
+} from "@maplibre/maplibre-react-native";
 import type { GpsPoint } from "@/lib/types";
 
 interface RunMapViewProps {
@@ -41,16 +47,13 @@ export function RunMapView({ route, height = 200 }: RunMapViewProps) {
       if (p.lng < minLng) minLng = p.lng;
       if (p.lng > maxLng) maxLng = p.lng;
     }
-    return {
-      ne: [maxLng, maxLat] as [number, number],
-      sw: [minLng, minLat] as [number, number],
-    };
+    return [minLng, minLat, maxLng, maxLat] as [number, number, number, number];
   }, [route]);
 
   const center = useMemo(
     () => [
-      (bounds.ne[0] + bounds.sw[0]) / 2,
-      (bounds.ne[1] + bounds.sw[1]) / 2,
+      (bounds[0] + bounds[2]) / 2,
+      (bounds[1] + bounds[3]) / 2,
     ] as [number, number],
     [bounds],
   );
@@ -69,54 +72,51 @@ export function RunMapView({ route, height = 200 }: RunMapViewProps) {
 
   return (
     <View className="overflow-hidden rounded-xl" style={{ height }}>
-      <MapLibreGL.MapView
+      <Map
         style={{ flex: 1 }}
         mapStyle={STYLE_URL}
-        attributionEnabled={false}
-        logoEnabled={false}
+        attribution={false}
+        logo={false}
       >
-        <MapLibreGL.Camera
-          defaultSettings={{
-            centerCoordinate: center,
-            zoomLevel: 14,
-          }}
-          bounds={{
-            ne: bounds.ne,
-            sw: bounds.sw,
-            paddingTop: 40,
-            paddingBottom: 40,
-            paddingLeft: 40,
-            paddingRight: 40,
+        <Camera
+          initialViewState={{
+            center,
+            zoom: 14,
+            bounds,
+            padding: { top: 40, bottom: 40, left: 40, right: 40 },
           }}
         />
-        <MapLibreGL.ShapeSource id="routeSource" shape={routeGeoJSON}>
-          <MapLibreGL.LineLayer
+        <GeoJSONSource id="routeSource" data={routeGeoJSON}>
+          <Layer
             id="routeLine"
-            style={{
-              lineColor: "#FF6B6B",
-              lineWidth: 4,
-              lineCap: "round",
-              lineJoin: "round",
+            type="line"
+            paint={{
+              "line-color": "#FF6B6B",
+              "line-width": 4,
+            }}
+            layout={{
+              "line-cap": "round",
+              "line-join": "round",
             }}
           />
-        </MapLibreGL.ShapeSource>
+        </GeoJSONSource>
         {/* Start marker */}
-        <MapLibreGL.PointAnnotation
+        <ViewAnnotation
           id="start"
-          coordinate={coordinates[0]}
+          lngLat={coordinates[0]}
           title="Start"
         >
           <View className="h-4 w-4 rounded-full border-2 border-white bg-success" />
-        </MapLibreGL.PointAnnotation>
+        </ViewAnnotation>
         {/* End marker */}
-        <MapLibreGL.PointAnnotation
+        <ViewAnnotation
           id="end"
-          coordinate={coordinates[coordinates.length - 1]}
+          lngLat={coordinates[coordinates.length - 1]}
           title="Finish"
         >
           <View className="h-4 w-4 rounded-full border-2 border-white bg-running" />
-        </MapLibreGL.PointAnnotation>
-      </MapLibreGL.MapView>
+        </ViewAnnotation>
+      </Map>
     </View>
   );
 }
