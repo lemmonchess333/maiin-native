@@ -18,7 +18,8 @@ import { useWorkouts } from "@/hooks/useWorkouts";
 import { useTemplates } from "@/hooks/useTemplates";
 import { usePersonalRecords } from "@/hooks/usePersonalRecords";
 import * as haptics from "@/lib/haptics";
-import { Plus, Trash2, Dumbbell, Check, Bookmark, BookmarkPlus, Trophy, Timer, Search } from "lucide-react-native";
+import { Plus, Trash2, Dumbbell, Check, Bookmark, BookmarkPlus, Trophy, Timer, Search, Info } from "lucide-react-native";
+import { ExerciseDemoSheet } from "@/components/ExerciseDemoSheet";
 
 interface LocalSet {
   weight: string;
@@ -62,6 +63,7 @@ export default function LogScreen() {
     weight: number;
   } | null>(null);
   const [workoutSummary, setWorkoutSummary] = useState<WorkoutSummary | null>(null);
+  const [demoExercise, setDemoExercise] = useState<string | null>(null);
   const startTime = useRef(Date.now());
 
   function loadTemplate(template: { name: string; exercises: { name: string; defaultSets: number }[] }) {
@@ -360,9 +362,17 @@ export default function LogScreen() {
                   </View>
                 )}
               </View>
-              <TouchableOpacity onPress={() => removeExercise(exercise.id)}>
-                <Trash2 size={18} color="#6B7280" />
-              </TouchableOpacity>
+              <View className="flex-row items-center gap-2">
+                <TouchableOpacity
+                  className="h-11 w-11 items-center justify-center"
+                  onPress={() => setDemoExercise(exercise.name)}
+                >
+                  <Info size={16} color="#6B7280" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => removeExercise(exercise.id)}>
+                  <Trash2 size={18} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Set headers */}
@@ -461,16 +471,26 @@ export default function LogScreen() {
             {TEMPLATES.filter((n) =>
               n.toLowerCase().includes(exerciseSearch.toLowerCase()),
             ).map((name) => (
-              <TouchableOpacity
+              <View
                 key={name}
-                className="border-b border-[#2A2A3A] py-3"
-                onPress={() => {
-                  addExercise(name);
-                  setExerciseSearch("");
-                }}
+                className="flex-row items-center border-b border-[#2A2A3A]"
               >
-                <Text className="text-sm text-gray-300">{name}</Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  className="flex-1 py-3"
+                  onPress={() => {
+                    addExercise(name);
+                    setExerciseSearch("");
+                  }}
+                >
+                  <Text className="text-sm text-gray-300">{name}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  className="h-11 w-11 items-center justify-center"
+                  onPress={() => setDemoExercise(name)}
+                >
+                  <Info size={16} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
             ))}
             {/* Custom exercise */}
             {exerciseSearch.trim().length > 0 &&
@@ -535,6 +555,13 @@ export default function LogScreen() {
         summary={workoutSummary}
         onClose={() => setWorkoutSummary(null)}
       />
+
+      {demoExercise !== null && (
+        <ExerciseDemoSheet
+          exerciseName={demoExercise}
+          onClose={() => setDemoExercise(null)}
+        />
+      )}
     </SafeAreaView>
   );
 }
