@@ -21,6 +21,9 @@ import { useWorkouts } from "@/hooks/useWorkouts";
 import { useRuns } from "@/hooks/useRuns";
 import { useProfile } from "@/hooks/useProfile";
 import { useStreakSync } from "@/hooks/useStreakSync";
+import { useStreaks } from "@/hooks/useStreaks";
+import { StreakCounter } from "@/components/StreakCounter";
+import { BadgeEarnedModal } from "@/components/BadgeEarnedModal";
 import { Dumbbell, Route, TrendingUp, Zap } from "lucide-react-native";
 import type { Activity } from "@/lib/types";
 
@@ -45,6 +48,8 @@ export default function HomeScreen() {
 
   // Recalculate streak whenever activity data changes
   useStreakSync(workouts, runs);
+
+  const { streakData, newBadge, dismissNewBadge, checkStreakBadges } = useStreaks();
 
   const loading = wLoading || rLoading;
 
@@ -133,6 +138,14 @@ export default function HomeScreen() {
             color="success"
           />
         </Card>
+
+        {/* Streak Counter */}
+        <View className="mb-5">
+          <StreakCounter
+            currentStreak={streakData.currentStreak}
+            longestStreak={streakData.longestStreak}
+          />
+        </View>
 
         {/* Quick Actions */}
         <SectionHeader title="Quick Start" />
@@ -248,6 +261,8 @@ export default function HomeScreen() {
           </View>
         </Card>
       </ScrollView>
+
+      <BadgeEarnedModal badge={newBadge} onDismiss={dismissNewBadge} />
     </SafeAreaView>
   );
 }
