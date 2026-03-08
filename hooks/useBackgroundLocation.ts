@@ -1,11 +1,11 @@
 /**
  * Background GPS tracking for runs.
  * Uses expo-task-manager + expo-location to continue GPS tracking when app is backgrounded.
+ * expo-task-manager is optional — if not installed, background tracking is a no-op.
  */
 
 import { useEffect, useRef, useCallback } from "react";
 import * as Location from "expo-location";
-import * as TaskManager from "expo-task-manager";
 import type { GpsPoint } from "@/lib/types";
 
 const LOCATION_TASK = "background-location-task";
@@ -13,24 +13,39 @@ const LOCATION_TASK = "background-location-task";
 // Route buffer for background updates
 let backgroundRouteBuffer: GpsPoint[] = [];
 
-TaskManager.defineTask(LOCATION_TASK, ({ data, error }) => {
-  if (error) return;
-  if (data) {
-    const { locations } = data as { locations: Location.LocationObject[] };
-    for (const loc of locations) {
-      backgroundRouteBuffer.push({
-        lat: loc.coords.latitude,
-        lng: loc.coords.longitude,
-        timestamp: loc.timestamp,
-      });
-    }
-  }
-});
+// Conditionally load expo-task-manager (may not be installed)
+let TaskManager: typeof import("expo-task-manager") | null = null;
+try {
+  TaskManager = require("expo-task-manager");
+} catch {
+  // expo-task-manager not installed — background tracking disabled
+}
+
+if (TaskManager) {
+  TaskManager.defineTask(
+    LOCATION_TASK,
+    ({ data, error }: { data: unknown; error: unknown }) => {
+      if (error) return;
+      if (data) {
+        const { locations } = data as { locations: Location.LocationObject[] };
+        for (const loc of locations) {
+          backgroundRouteBuffer.push({
+            lat: loc.coords.latitude,
+            lng: loc.coords.longitude,
+            timestamp: loc.timestamp,
+          });
+        }
+      }
+    },
+  );
+}
 
 export function useBackgroundLocation() {
   const isTracking = useRef(false);
 
   const startBackgroundTracking = useCallback(async () => {
+    if (!TaskManager) return false;
+
     const { status: fg } = await Location.requestForegroundPermissionsAsync();
     if (fg !== "granted") return false;
 
@@ -82,6 +97,7 @@ export function useBackgroundLocation() {
   }, []);
 
   return {
+    available: !!TaskManager,
     startBackgroundTracking,
     stopBackgroundTracking,
     getBackgroundRoute,

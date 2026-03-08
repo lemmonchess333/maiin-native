@@ -85,7 +85,7 @@ export function RunSummaryModal({
             <StatBadge
               label="Duration"
               value={formatTime(data.durationSeconds)}
-              color="white"
+              color="teal"
             />
             <StatBadge
               label="Calories"
