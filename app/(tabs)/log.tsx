@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
+  Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card } from "@/components/Card";
@@ -18,7 +19,11 @@ import { useWorkouts } from "@/hooks/useWorkouts";
 import { useTemplates } from "@/hooks/useTemplates";
 import { usePersonalRecords } from "@/hooks/usePersonalRecords";
 import * as haptics from "@/lib/haptics";
-import { Plus, Trash2, Dumbbell, Check, Bookmark, BookmarkPlus, Trophy, Timer, Search, Info } from "lucide-react-native";
+import { Plus, Trash2, Dumbbell, Check, Bookmark, BookmarkPlus, Trophy, Timer, Search, Info, GripVertical } from "lucide-react-native";
+import DraggableFlatList, {
+  ScaleDecorator,
+  type RenderItemParams,
+} from "react-native-draggable-flatlist";
 import { ExerciseDemoSheet } from "@/components/ExerciseDemoSheet";
 
 interface LocalSet {
@@ -64,6 +69,13 @@ export default function LogScreen() {
   } | null>(null);
   const [workoutSummary, setWorkoutSummary] = useState<WorkoutSummary | null>(null);
   const [demoExercise, setDemoExercise] = useState<string | null>(null);
+  const [justDroppedId, setJustDroppedId] = useState<string | null>(null);
+  const [undoAction, setUndoAction] = useState<{
+    exerciseId: string;
+    setIndex: number;
+    prevSet: LocalSet;
+  } | null>(null);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startTime = useRef(Date.now());
 
   function loadTemplate(template: { name: string; exercises: { name: string; defaultSets: number }[] }) {
@@ -139,6 +151,47 @@ export default function LogScreen() {
           : ex,
       ),
     );
+  }
+
+  function moveExercise(exerciseId: string, direction: "up" | "down") {
+    haptics.lightTap();
+    setExercises((prev) => {
+      const idx = prev.findIndex((ex) => ex.id === exerciseId);
+      if (idx < 0) return prev;
+      const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+      if (targetIdx < 0 || targetIdx >= prev.length) return prev;
+      const next = [...prev];
+      [next[idx], next[targetIdx]] = [next[targetIdx], next[idx]];
+      return next;
+    });
+    // Green flash on the moved exercise
+    setJustDroppedId(exerciseId);
+    setTimeout(() => setJustDroppedId(null), 300);
+  }
+
+  function handleSetDone(exerciseId: string, setIndex: number) {
+    const exercise = exercises.find((ex) => ex.id === exerciseId);
+    if (!exercise) return;
+    const prevSet = { ...exercise.sets[setIndex] };
+
+    if (!prevSet.done) {
+      haptics.mediumTap();
+      // Save undo action
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+      setUndoAction({ exerciseId, setIndex, prevSet });
+      undoTimerRef.current = setTimeout(() => setUndoAction(null), 4000);
+    }
+    updateSet(exerciseId, setIndex, "done", !prevSet.done);
+  }
+
+  function handleUndo() {
+    if (!undoAction) return;
+    haptics.lightTap();
+    updateSet(undoAction.exerciseId, undoAction.setIndex, "done", undoAction.prevSet.done);
+    updateSet(undoAction.exerciseId, undoAction.setIndex, "weight", undoAction.prevSet.weight);
+    updateSet(undoAction.exerciseId, undoAction.setIndex, "reps", undoAction.prevSet.reps);
+    setUndoAction(null);
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
   }
 
   function toggleSuperset(exerciseId: string) {
@@ -328,6 +381,18 @@ export default function LogScreen() {
           onClose={() => setShowRestTimer(false)}
         />
 
+        {/* Undo Banner */}
+        {undoAction && (
+          <TouchableOpacity
+            className="mb-3 flex-row items-center justify-center rounded-xl bg-warning/15 py-2"
+            onPress={handleUndo}
+          >
+            <Text className="text-sm font-medium text-warning">
+              Undo last set ↩
+            </Text>
+          </TouchableOpacity>
+        )}
+
         {/* Exercises */}
         {exercises.map((exercise, exIdx) => {
           const currentPR = getPR(exercise.name);
@@ -347,8 +412,21 @@ export default function LogScreen() {
                 </Text>
               </View>
             )}
-          <Card className={`mb-4 ${isInSuperset ? "border border-teal/30" : ""}`}>
+          <Card
+            className={`mb-4 ${isInSuperset ? "border border-teal/30" : ""}`}
+            style={justDroppedId === exercise.id ? { backgroundColor: "rgba(52, 211, 153, 0.15)" } : undefined}
+          >
             <View className="mb-3 flex-row items-center justify-between">
+              {/* Drag reorder buttons */}
+              <View className="mr-2 items-center">
+                <TouchableOpacity
+                  className="h-6 w-6 items-center justify-center"
+                  onPress={() => moveExercise(exercise.id, "up")}
+                  disabled={exIdx === 0}
+                >
+                  <GripVertical size={14} color={exIdx === 0 ? "#2A2A3A" : "#6B7280"} />
+                </TouchableOpacity>
+              </View>
               <View className="flex-1 flex-row items-center">
                 <Text className="text-base font-bold text-brand">
                   {exercise.name}
@@ -413,10 +491,7 @@ export default function LogScreen() {
                 />
                 <TouchableOpacity
                   className={`h-9 w-10 items-center justify-center rounded-lg ${set.done ? "bg-success" : "bg-background"}`}
-                  onPress={() => {
-                    if (!set.done) haptics.lightTap();
-                    updateSet(exercise.id, index, "done", !set.done);
-                  }}
+                  onPress={() => handleSetDone(exercise.id, index)}
                 >
                   <Check size={16} color={set.done ? "#fff" : "#6B7280"} />
                 </TouchableOpacity>
