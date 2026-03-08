@@ -5,6 +5,7 @@ import {
   Dumbbell,
   Users,
   UserCircle,
+  Apple,
 } from "lucide-react-native";
 import { colors } from "@/constants/Colors";
 
@@ -50,6 +51,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Dumbbell size={size} color={color} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="nutrition"
+        options={{
+          title: "Nutrition",
+          tabBarIcon: ({ color, size }) => <Apple size={size} color={color} />,
         }}
       />
       <Tabs.Screen

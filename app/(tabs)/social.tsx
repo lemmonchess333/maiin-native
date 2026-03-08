@@ -1,30 +1,37 @@
-import { useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  TextInput,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card } from "@/components/Card";
-import { SectionHeader } from "@/components/SectionHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { SkeletonCard } from "@/components/Skeleton";
 import { useSocial } from "@/hooks/useSocial";
+import {
+  useChallenges,
+  GLOBAL_CHALLENGES,
+  getChallengeColor,
+} from "@/hooks/useChallenges";
 import { useAuth } from "@/lib/auth-context";
 import * as haptics from "@/lib/haptics";
 import {
   Users,
   Heart,
-  MessageCircle,
   Dumbbell,
   Route,
   UserPlus,
   UserCheck,
+  Trophy,
+  Target,
+  Search,
+  Zap,
 } from "lucide-react-native";
+
+type SocialTab = "feed" | "leaderboard" | "challenges" | "find";
 
 function timeAgo(date: Date): string {
   const now = Date.now();
@@ -40,16 +47,18 @@ function timeAgo(date: Date): string {
 
 export default function SocialScreen() {
   const { user } = useAuth();
+  const { posts, following, loading, toggleLike, followUser, unfollowUser } =
+    useSocial();
   const {
-    posts,
-    following,
-    loading,
-    toggleLike,
-    followUser,
-    unfollowUser,
-  } = useSocial();
-
+    myChallenges,
+    availableChallenges,
+    joinChallenge,
+    isJoined,
+    getProgress,
+  } = useChallenges();
+  const [activeTab, setActiveTab] = useState<SocialTab>("feed");
   const [refreshing, setRefreshing] = useState(false);
+
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     setTimeout(() => setRefreshing(false), 800);
@@ -75,7 +84,6 @@ export default function SocialScreen() {
     [following, followUser, unfollowUser],
   );
 
-  // Unique users from posts (excluding current user) for "People" section
   const uniqueUsers = posts.reduce<
     { userId: string; displayName: string }[]
   >((acc, post) => {
@@ -88,8 +96,55 @@ export default function SocialScreen() {
     return acc;
   }, []);
 
+  const TABS: { key: SocialTab; label: string; icon: React.ReactElement }[] = [
+    { key: "feed", label: "Feed", icon: <Users size={14} color="#6B7280" /> },
+    { key: "leaderboard", label: "Board", icon: <Trophy size={14} color="#6B7280" /> },
+    { key: "challenges", label: "Challenges", icon: <Target size={14} color="#6B7280" /> },
+    { key: "find", label: "Find", icon: <Search size={14} color="#6B7280" /> },
+  ];
+
   return (
     <SafeAreaView className="flex-1 bg-background">
+      {/* Header */}
+      <View className="px-5 pb-2 pt-2">
+        <View className="mb-3 flex-row items-center justify-between">
+          <View>
+            <Text className="text-2xl font-bold text-white">Community</Text>
+            <Text className="text-sm text-gray-400">
+              {following.length} following
+            </Text>
+          </View>
+          <Users size={22} color="#2dd4bf" />
+        </View>
+
+        {/* Tab Bar */}
+        <View className="flex-row gap-2">
+          {TABS.map((tab) => (
+            <TouchableOpacity
+              key={tab.key}
+              className={`flex-1 flex-row items-center justify-center gap-1 rounded-xl py-2.5 ${
+                activeTab === tab.key ? "bg-teal" : "bg-[#1A1A24]"
+              }`}
+              onPress={() => {
+                haptics.selection();
+                setActiveTab(tab.key);
+              }}
+            >
+              {React.cloneElement(tab.icon, {
+                color: activeTab === tab.key ? "#fff" : "#6B7280",
+              })}
+              <Text
+                className={`text-xs font-semibold ${
+                  activeTab === tab.key ? "text-white" : "text-gray-400"
+                }`}
+              >
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
       <ScrollView
         className="flex-1 px-5"
         showsVerticalScrollIndicator={false}
@@ -102,159 +157,317 @@ export default function SocialScreen() {
           />
         }
       >
-        {/* Header */}
-        <View className="mb-4 mt-2 flex-row items-center justify-between">
-          <View>
-            <Text className="text-2xl font-bold text-white">Community</Text>
-            <Text className="text-sm text-gray-400">
-              {following.length} following
-            </Text>
-          </View>
-          <Users size={22} color="#2dd4bf" />
-        </View>
-
-        {/* People Row */}
-        {uniqueUsers.length > 0 && (
+        {/* Feed Tab */}
+        {activeTab === "feed" && (
           <>
-            <SectionHeader title="People" />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              className="mb-5"
-            >
-              {uniqueUsers.map((person) => {
-                const isFollowing = following.includes(person.userId);
+            {loading ? (
+              <>
+                <SkeletonCard />
+                <SkeletonCard />
+              </>
+            ) : posts.length === 0 ? (
+              <EmptyState
+                icon={<Users size={28} color="#2dd4bf" />}
+                title="No Posts Yet"
+                subtitle="Complete a workout or run to share!"
+              />
+            ) : (
+              posts.map((post) => {
+                const isLiked = user
+                  ? post.likes.includes(user.uid)
+                  : false;
+                const isOwnPost = post.userId === user?.uid;
                 return (
-                  <TouchableOpacity
-                    key={person.userId}
-                    className="mr-3 items-center rounded-2xl bg-[#1A1A24] px-4 py-3"
-                    style={{ width: 110 }}
-                    onPress={() => handleFollowToggle(person.userId)}
-                    activeOpacity={0.7}
-                  >
-                    <View className="mb-2 h-10 w-10 items-center justify-center rounded-full bg-teal/20">
-                      {isFollowing ? (
-                        <UserCheck size={18} color="#2dd4bf" />
-                      ) : (
-                        <UserPlus size={18} color="#6B7280" />
-                      )}
+                  <Card key={post.id} className="mb-3">
+                    <View className="flex-row items-start">
+                      <View
+                        className={`mr-3 h-10 w-10 items-center justify-center rounded-full ${
+                          post.type === "workout"
+                            ? "bg-brand/20"
+                            : "bg-running/20"
+                        }`}
+                      >
+                        {post.type === "workout" ? (
+                          <Dumbbell size={18} color="#8b5cf6" />
+                        ) : (
+                          <Route size={18} color="#FF6B6B" />
+                        )}
+                      </View>
+                      <View className="flex-1">
+                        <View className="flex-row items-center justify-between">
+                          <View className="flex-row items-center">
+                            <Text className="text-sm font-bold text-white">
+                              {post.displayName}
+                            </Text>
+                            {isOwnPost && (
+                              <Text className="ml-2 text-[10px] text-gray-500">
+                                You
+                              </Text>
+                            )}
+                          </View>
+                          <Text className="text-xs text-gray-500">
+                            {timeAgo(post.createdAt.toDate())}
+                          </Text>
+                        </View>
+                        <Text className="mt-1 text-sm text-gray-300">
+                          {post.detail}
+                        </Text>
+                        <View className="mt-2 flex-row items-center gap-4">
+                          <TouchableOpacity
+                            className="flex-row items-center"
+                            onPress={() => handleLike(post.id)}
+                          >
+                            <Heart
+                              size={14}
+                              color={isLiked ? "#FF6B6B" : "#6B7280"}
+                              fill={isLiked ? "#FF6B6B" : "none"}
+                            />
+                            <Text
+                              className={`ml-1 text-xs ${isLiked ? "text-running" : "text-gray-500"}`}
+                            >
+                              {post.likes.length}
+                            </Text>
+                          </TouchableOpacity>
+                          {!isOwnPost && (
+                            <TouchableOpacity
+                              className="flex-row items-center"
+                              onPress={() =>
+                                handleFollowToggle(post.userId)
+                              }
+                            >
+                              {following.includes(post.userId) ? (
+                                <UserCheck size={14} color="#2dd4bf" />
+                              ) : (
+                                <UserPlus size={14} color="#6B7280" />
+                              )}
+                              <Text
+                                className={`ml-1 text-xs ${
+                                  following.includes(post.userId)
+                                    ? "text-teal"
+                                    : "text-gray-500"
+                                }`}
+                              >
+                                {following.includes(post.userId)
+                                  ? "Following"
+                                  : "Follow"}
+                              </Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      </View>
                     </View>
-                    <Text
-                      className="text-xs font-semibold text-white"
-                      numberOfLines={1}
-                    >
-                      {person.displayName}
-                    </Text>
-                    <Text
-                      className={`text-[10px] ${isFollowing ? "text-teal" : "text-gray-500"}`}
-                    >
-                      {isFollowing ? "Following" : "Follow"}
-                    </Text>
-                  </TouchableOpacity>
+                  </Card>
                 );
-              })}
-            </ScrollView>
+              })
+            )}
           </>
         )}
 
-        {/* Activity Feed */}
-        <SectionHeader title="Feed" />
-
-        {loading ? (
-          <>
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </>
-        ) : posts.length === 0 ? (
-          <EmptyState
-            icon={<Users size={28} color="#2dd4bf" />}
-            title="No Posts Yet"
-            subtitle="Complete a workout or run to share it with the community!"
-          />
-        ) : (
-          posts.map((post) => {
-            const isLiked = user ? post.likes.includes(user.uid) : false;
-            const isOwnPost = post.userId === user?.uid;
-
-            return (
-              <Card key={post.id} className="mb-3">
-                <View className="flex-row items-start">
-                  <View
-                    className={`mr-3 h-10 w-10 items-center justify-center rounded-full ${
-                      post.type === "workout" ? "bg-brand/20" : "bg-running/20"
-                    }`}
-                  >
-                    {post.type === "workout" ? (
-                      <Dumbbell size={18} color="#8b5cf6" />
-                    ) : (
-                      <Route size={18} color="#FF6B6B" />
-                    )}
-                  </View>
-                  <View className="flex-1">
-                    <View className="flex-row items-center justify-between">
-                      <View className="flex-row items-center">
-                        <Text className="text-sm font-bold text-white">
-                          {post.displayName}
-                        </Text>
-                        {isOwnPost && (
-                          <Text className="ml-2 text-[10px] text-gray-500">
-                            You
-                          </Text>
-                        )}
-                      </View>
-                      <Text className="text-xs text-gray-500">
-                        {timeAgo(post.createdAt.toDate())}
-                      </Text>
-                    </View>
-                    <Text className="mt-1 text-sm text-gray-300">
-                      {post.detail}
+        {/* Leaderboard Tab */}
+        {activeTab === "leaderboard" && (
+          <Card className="mb-4 mt-2">
+            <Text className="mb-2 text-sm font-semibold text-white">
+              Hybrid Score
+            </Text>
+            <Text className="mb-3 text-xs text-gray-400">
+              Combined lifting volume + running distance this week
+            </Text>
+            {uniqueUsers.length === 0 ? (
+              <Text className="text-sm text-gray-500">
+                Follow more athletes to see the leaderboard
+              </Text>
+            ) : (
+              uniqueUsers.slice(0, 10).map((person, i) => (
+                <View
+                  key={person.userId}
+                  className="flex-row items-center border-b border-[#2A2A3A] py-2.5 last:border-b-0"
+                >
+                  <Text className="mr-3 w-6 text-center text-sm font-bold text-gray-400">
+                    {i + 1}
+                  </Text>
+                  <View className="mr-3 h-8 w-8 items-center justify-center rounded-full bg-teal/20">
+                    <Text className="text-xs font-bold text-teal">
+                      {person.displayName[0]?.toUpperCase()}
                     </Text>
-                    <View className="mt-2 flex-row items-center gap-4">
-                      <TouchableOpacity
-                        className="flex-row items-center"
-                        onPress={() => handleLike(post.id)}
-                      >
-                        <Heart
-                          size={14}
-                          color={isLiked ? "#FF6B6B" : "#6B7280"}
-                          fill={isLiked ? "#FF6B6B" : "none"}
-                        />
-                        <Text
-                          className={`ml-1 text-xs ${isLiked ? "text-running" : "text-gray-500"}`}
-                        >
-                          {post.likes.length}
-                        </Text>
-                      </TouchableOpacity>
-                      {!isOwnPost && (
-                        <TouchableOpacity
-                          className="flex-row items-center"
-                          onPress={() => handleFollowToggle(post.userId)}
-                        >
-                          {following.includes(post.userId) ? (
-                            <UserCheck size={14} color="#2dd4bf" />
-                          ) : (
-                            <UserPlus size={14} color="#6B7280" />
-                          )}
-                          <Text
-                            className={`ml-1 text-xs ${
-                              following.includes(post.userId)
-                                ? "text-teal"
-                                : "text-gray-500"
-                            }`}
-                          >
-                            {following.includes(post.userId)
-                              ? "Following"
-                              : "Follow"}
-                          </Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
+                  </View>
+                  <Text className="flex-1 text-sm text-white">
+                    {person.displayName}
+                  </Text>
+                  <View className="flex-row items-center gap-1">
+                    <Zap size={12} color="#f59e0b" />
+                    <Text className="text-sm font-semibold text-warning">
+                      --
+                    </Text>
                   </View>
                 </View>
-              </Card>
-            );
-          })
+              ))
+            )}
+          </Card>
+        )}
+
+        {/* Challenges Tab */}
+        {activeTab === "challenges" && (
+          <>
+            {myChallenges.filter((c) => !c.completed).length > 0 && (
+              <>
+                <Text className="mb-2 mt-2 text-sm font-semibold text-white">
+                  Active Challenges
+                </Text>
+                {myChallenges
+                  .filter((c) => !c.completed)
+                  .map((uc) => {
+                    const challenge = GLOBAL_CHALLENGES.find(
+                      (c) => c.id === uc.challengeId,
+                    );
+                    if (!challenge) return null;
+                    const pct = Math.min(
+                      (uc.progress / challenge.target.value) * 100,
+                      100,
+                    );
+                    const color = getChallengeColor(challenge.type);
+                    return (
+                      <Card key={uc.challengeId} className="mb-3">
+                        <View className="flex-row items-center justify-between">
+                          <View className="flex-1">
+                            <Text className="text-sm font-bold text-white">
+                              {challenge.name}
+                            </Text>
+                            <Text className="text-xs text-gray-400">
+                              {challenge.description}
+                            </Text>
+                          </View>
+                          <View
+                            className="rounded-full px-2 py-0.5"
+                            style={{ backgroundColor: color + "20" }}
+                          >
+                            <Text
+                              className="text-[10px] font-semibold"
+                              style={{ color }}
+                            >
+                              {challenge.type}
+                            </Text>
+                          </View>
+                        </View>
+                        <View className="mt-2">
+                          <View className="flex-row justify-between">
+                            <Text className="text-[10px] text-gray-400">
+                              {uc.progress} / {challenge.target.value}{" "}
+                              {challenge.target.unit}
+                            </Text>
+                            <Text className="text-[10px] text-gray-400">
+                              {Math.round(pct)}%
+                            </Text>
+                          </View>
+                          <View className="mt-1 h-2 rounded-full bg-[#2A2A3A]">
+                            <View
+                              className="h-full rounded-full"
+                              style={{
+                                width: `${pct}%`,
+                                backgroundColor: color,
+                              }}
+                            />
+                          </View>
+                        </View>
+                      </Card>
+                    );
+                  })}
+              </>
+            )}
+
+            <Text className="mb-2 mt-2 text-sm font-semibold text-white">
+              Available Challenges
+            </Text>
+            {availableChallenges.map((challenge) => {
+              const color = getChallengeColor(challenge.type);
+              return (
+                <Card key={challenge.id} className="mb-3">
+                  <View className="flex-row items-center justify-between">
+                    <View className="flex-1">
+                      <Text className="text-sm font-bold text-white">
+                        {challenge.name}
+                      </Text>
+                      <Text className="text-xs text-gray-400">
+                        {challenge.description}
+                      </Text>
+                      <View className="mt-1 flex-row items-center gap-2">
+                        <View
+                          className="rounded-full px-2 py-0.5"
+                          style={{ backgroundColor: color + "20" }}
+                        >
+                          <Text
+                            className="text-[10px] font-semibold"
+                            style={{ color }}
+                          >
+                            {challenge.type}
+                          </Text>
+                        </View>
+                        <Text className="text-[10px] text-gray-500">
+                          {challenge.duration}
+                        </Text>
+                      </View>
+                    </View>
+                    <TouchableOpacity
+                      className="rounded-xl bg-teal px-3 py-2"
+                      onPress={() => {
+                        haptics.success();
+                        joinChallenge(challenge.id);
+                      }}
+                    >
+                      <Text className="text-xs font-semibold text-white">
+                        Join
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </Card>
+              );
+            })}
+          </>
+        )}
+
+        {/* Find Tab */}
+        {activeTab === "find" && (
+          <>
+            <Text className="mb-3 mt-2 text-sm text-gray-400">
+              Discover athletes in the community
+            </Text>
+            {uniqueUsers.length === 0 ? (
+              <EmptyState
+                icon={<Search size={28} color="#2dd4bf" />}
+                title="No Users Found"
+                subtitle="Be the first to post and others will find you!"
+              />
+            ) : (
+              uniqueUsers.map((person) => {
+                const isFollowing = following.includes(person.userId);
+                return (
+                  <Card key={person.userId} className="mb-3">
+                    <View className="flex-row items-center justify-between">
+                      <View className="flex-row items-center gap-3">
+                        <View className="h-10 w-10 items-center justify-center rounded-full bg-teal/20">
+                          <Text className="text-sm font-bold text-teal">
+                            {person.displayName[0]?.toUpperCase()}
+                          </Text>
+                        </View>
+                        <Text className="text-sm font-semibold text-white">
+                          {person.displayName}
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        className={`rounded-xl px-3 py-2 ${isFollowing ? "bg-[#2A2A3A]" : "bg-teal"}`}
+                        onPress={() => handleFollowToggle(person.userId)}
+                      >
+                        <Text
+                          className={`text-xs font-semibold ${isFollowing ? "text-gray-400" : "text-white"}`}
+                        >
+                          {isFollowing ? "Following" : "Follow"}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </Card>
+                );
+              })
+            )}
+          </>
         )}
 
         <View className="h-4" />
