@@ -7,8 +7,32 @@ import Animated, {
   FadeIn,
   FadeOut,
 } from "react-native-reanimated";
+import { Audio } from "expo-av";
 import { Timer, X, RotateCcw } from "lucide-react-native";
 import * as haptics from "@/lib/haptics";
+
+/** Play a short chime when timer finishes */
+async function playChime() {
+  try {
+    await Audio.setAudioModeAsync({
+      playsInSilentModeIOS: true,
+      staysActiveInBackground: false,
+    });
+    // Generate a simple 880Hz beep using a WAV data URI
+    const { sound } = await Audio.Sound.createAsync(
+      require("@/assets/sounds/chime.wav"),
+    );
+    await sound.playAsync();
+    // Unload after playback
+    sound.setOnPlaybackStatusUpdate((status) => {
+      if ("didJustFinish" in status && status.didJustFinish) {
+        sound.unloadAsync();
+      }
+    });
+  } catch {
+    // Fallback: haptics only (sound file may not exist)
+  }
+}
 
 const PRESETS = [30, 60, 90, 120, 180];
 
@@ -33,6 +57,7 @@ export function RestTimer({ visible, onClose }: RestTimerProps) {
             intervalRef.current = null;
             setRunning(false);
             haptics.success();
+            playChime();
             return 0;
           }
           return s - 1;

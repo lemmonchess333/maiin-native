@@ -47,6 +47,7 @@ export interface Run {
 export interface UserProfile {
   userId: string;
   displayName: string;
+  biologicalSex?: "male" | "female";
   totalWorkouts: number;
   totalRuns: number;
   totalMiles: number;

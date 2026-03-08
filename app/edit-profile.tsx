@@ -14,12 +14,15 @@ export default function EditProfileScreen() {
   const [displayName, setDisplayName] = useState(
     profile?.displayName ?? "",
   );
+  const [biologicalSex, setBiologicalSex] = useState<"male" | "female" | undefined>(
+    profile?.biologicalSex,
+  );
   const [saving, setSaving] = useState(false);
 
   async function handleSave() {
     setSaving(true);
     try {
-      await updateProfile({ displayName: displayName.trim() });
+      await updateProfile({ displayName: displayName.trim(), biologicalSex });
       haptics.success();
       Alert.alert("Saved", "Profile updated!");
       router.back();
@@ -64,6 +67,54 @@ export default function EditProfileScreen() {
           onChangeText={setDisplayName}
           autoFocus
         />
+
+        {/* Biological Sex */}
+        <Text className="mb-2 text-sm font-medium text-gray-400">
+          Biological Sex
+        </Text>
+        <Text className="mb-2 text-xs text-gray-500">
+          Used for calorie and macro calculations
+        </Text>
+        <View className="mb-6 flex-row gap-3">
+          <TouchableOpacity
+            className={`flex-1 items-center rounded-xl py-3 ${
+              biologicalSex === "male"
+                ? "bg-brand"
+                : "border border-[#2A2A3A] bg-[#1A1A24]"
+            }`}
+            onPress={() => {
+              haptics.selection();
+              setBiologicalSex("male");
+            }}
+          >
+            <Text
+              className={`text-sm font-semibold ${
+                biologicalSex === "male" ? "text-white" : "text-gray-400"
+              }`}
+            >
+              Male
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            className={`flex-1 items-center rounded-xl py-3 ${
+              biologicalSex === "female"
+                ? "bg-brand"
+                : "border border-[#2A2A3A] bg-[#1A1A24]"
+            }`}
+            onPress={() => {
+              haptics.selection();
+              setBiologicalSex("female");
+            }}
+          >
+            <Text
+              className={`text-sm font-semibold ${
+                biologicalSex === "female" ? "text-white" : "text-gray-400"
+              }`}
+            >
+              Female
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         <Button title="Save Changes" loading={saving} onPress={handleSave} />
       </View>

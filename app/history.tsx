@@ -19,6 +19,7 @@ import { PressableScale } from "@/components/PressableScale";
 import { WorkoutDetailSheet } from "@/components/WorkoutDetailSheet";
 import { useWorkouts } from "@/hooks/useWorkouts";
 import { useRuns } from "@/hooks/useRuns";
+import { usePerformanceWeeks, type PerformanceWeek } from "@/hooks/usePerformance";
 import * as haptics from "@/lib/haptics";
 import {
   Dumbbell,
@@ -26,6 +27,8 @@ import {
   ArrowLeft,
   Trash2,
   Calendar,
+  TrendingUp,
+  Activity as ActivityIcon,
 } from "lucide-react-native";
 import type { Activity } from "@/lib/types";
 
@@ -43,14 +46,69 @@ function formatDuration(secs: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+type HistoryTab = "activity" | "performance";
+
+function PIGauge({ value, label }: { value: number; label: string }) {
+  const color =
+    value >= 80 ? "#34d399" : value >= 60 ? "#2dd4bf" : value >= 40 ? "#f59e0b" : "#FF6B6B";
+  return (
+    <View className="items-center">
+      <View className="h-20 w-20 items-center justify-center rounded-full border-4" style={{ borderColor: color }}>
+        <Text className="text-2xl font-bold" style={{ color }}>{value}</Text>
+      </View>
+      <Text className="mt-1 text-xs text-gray-400">{label}</Text>
+    </View>
+  );
+}
+
+function PITrendLine({ weeks }: { weeks: PerformanceWeek[] }) {
+  if (weeks.length < 2) return null;
+  const maxPI = Math.max(...weeks.map((w) => w.performanceIndex), 100);
+  const barWidth = 100 / weeks.length;
+
+  return (
+    <View className="mt-4">
+      <Text className="mb-2 text-xs font-semibold text-gray-400">
+        PI Trend ({weeks.length} weeks)
+      </Text>
+      <View className="h-24 flex-row items-end rounded-xl bg-[#0F0F14] p-2">
+        {weeks.map((w, i) => {
+          const height = Math.max((w.performanceIndex / maxPI) * 100, 4);
+          const color =
+            w.performanceIndex >= 80
+              ? "#34d399"
+              : w.performanceIndex >= 60
+                ? "#2dd4bf"
+                : w.performanceIndex >= 40
+                  ? "#f59e0b"
+                  : "#FF6B6B";
+          return (
+            <View
+              key={w.weekKey}
+              className="flex-1 items-center"
+            >
+              <View
+                className="w-3 rounded-t-sm"
+                style={{ height: `${height}%`, backgroundColor: color }}
+              />
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 export default function HistoryScreen() {
   const router = useRouter();
   const { workouts, loading: wLoad, deleteWorkout } = useWorkouts(50);
   const { runs, loading: rLoad, deleteRun } = useRuns(50);
+  const { weeks: perfWeeks, currentWeek, loading: perfLoading } = usePerformanceWeeks(12);
   const bottomSheetRef = useRef<BottomSheet>(null);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(
     null,
   );
+  const [tab, setTab] = useState<HistoryTab>("activity");
 
   const loading = wLoad || rLoad;
 
@@ -130,6 +188,118 @@ export default function HistoryScreen() {
             <Text className="text-2xl font-bold text-white">History</Text>
           </View>
 
+          {/* Tab Switcher */}
+          <View className="mb-4 flex-row rounded-xl bg-[#1A1A24] p-1">
+            <TouchableOpacity
+              className={`flex-1 flex-row items-center justify-center rounded-lg py-2.5 ${
+                tab === "activity" ? "bg-brand" : ""
+              }`}
+              onPress={() => setTab("activity")}
+            >
+              <Calendar size={14} color={tab === "activity" ? "#fff" : "#6B7280"} />
+              <Text
+                className={`ml-1.5 text-sm font-medium ${
+                  tab === "activity" ? "text-white" : "text-gray-400"
+                }`}
+              >
+                Activity
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              className={`flex-1 flex-row items-center justify-center rounded-lg py-2.5 ${
+                tab === "performance" ? "bg-brand" : ""
+              }`}
+              onPress={() => setTab("performance")}
+            >
+              <TrendingUp size={14} color={tab === "performance" ? "#fff" : "#6B7280"} />
+              <Text
+                className={`ml-1.5 text-sm font-medium ${
+                  tab === "performance" ? "text-white" : "text-gray-400"
+                }`}
+              >
+                Performance
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Performance Tab */}
+          {tab === "performance" && (
+            <View>
+              {perfLoading ? (
+                <>
+                  <SkeletonCard />
+                  <SkeletonCard />
+                </>
+              ) : !currentWeek ? (
+                <EmptyState
+                  icon={<ActivityIcon size={28} color="#8b5cf6" />}
+                  title="No Performance Data"
+                  subtitle="Complete a week of training to see your Performance Index."
+                />
+              ) : (
+                <>
+                  {/* Current PI Score */}
+                  <AnimatedCard index={0} className="mb-4">
+                    <Text className="mb-3 text-sm font-semibold text-white">
+                      This Week's Performance
+                    </Text>
+                    <View className="flex-row justify-around">
+                      <PIGauge value={currentWeek.performanceIndex} label="Overall PI" />
+                      <PIGauge value={currentWeek.liftLoadScore} label="Lift Load" />
+                      <PIGauge value={currentWeek.runLoadScore} label="Run Load" />
+                    </View>
+                    <View className="mt-3 flex-row justify-around">
+                      <PIGauge value={currentWeek.recoveryScore} label="Recovery" />
+                      <PIGauge value={currentWeek.adherenceScore} label="Adherence" />
+                    </View>
+                    {currentWeek.insight ? (
+                      <View className="mt-3 rounded-lg bg-brand/10 px-3 py-2">
+                        <Text className="text-xs text-brand">{currentWeek.insight}</Text>
+                      </View>
+                    ) : null}
+                    <View className="mt-2 items-center">
+                      <View
+                        className="rounded-full px-3 py-1"
+                        style={{
+                          backgroundColor:
+                            currentWeek.loadBand === "overreach"
+                              ? "rgba(255, 107, 107, 0.15)"
+                              : currentWeek.loadBand === "high"
+                                ? "rgba(245, 158, 11, 0.15)"
+                                : "rgba(139, 92, 246, 0.15)",
+                        }}
+                      >
+                        <Text
+                          className="text-xs font-semibold capitalize"
+                          style={{
+                            color:
+                              currentWeek.loadBand === "overreach"
+                                ? "#FF6B6B"
+                                : currentWeek.loadBand === "high"
+                                  ? "#f59e0b"
+                                  : "#8b5cf6",
+                          }}
+                        >
+                          {currentWeek.loadBand} load
+                        </Text>
+                      </View>
+                    </View>
+                  </AnimatedCard>
+
+                  {/* PI Trend */}
+                  {perfWeeks.length >= 2 && (
+                    <AnimatedCard index={1} className="mb-4">
+                      <PITrendLine weeks={perfWeeks} />
+                    </AnimatedCard>
+                  )}
+                </>
+              )}
+            </View>
+          )}
+
+          {/* Activity Tab */}
+          {tab === "activity" && (
+            <>
           <SectionHeader title={`${allActivity.length} Activities`} />
 
           {loading ? (
@@ -194,6 +364,9 @@ export default function HistoryScreen() {
                 </PressableScale>
               );
             })
+          )}
+
+          </>
           )}
 
           <View className="h-8" />
