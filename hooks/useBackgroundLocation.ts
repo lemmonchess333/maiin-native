@@ -14,7 +14,8 @@ const LOCATION_TASK = "background-location-task";
 let backgroundRouteBuffer: GpsPoint[] = [];
 
 // Conditionally load expo-task-manager (may not be installed)
-let TaskManager: typeof import("expo-task-manager") | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let TaskManager: any = null;
 try {
   TaskManager = require("expo-task-manager");
 } catch {
