@@ -130,7 +130,7 @@ export default function SocialScreen() {
                 setActiveTab(tab.key);
               }}
             >
-              {React.cloneElement(tab.icon, {
+              {React.cloneElement(tab.icon as React.ReactElement<{ color: string }>, {
                 color: activeTab === tab.key ? "#fff" : "#6B7280",
               })}
               <Text
