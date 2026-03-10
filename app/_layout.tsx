@@ -40,6 +40,7 @@ function RootNav() {
       <Stack.Screen name="edit-profile" />
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="forgot-password" />
+      <Stack.Screen name="workout-session" options={{ gestureEnabled: false }} />
       <Stack.Screen name="modal" options={{ presentation: "modal" }} />
     </Stack>
   );
