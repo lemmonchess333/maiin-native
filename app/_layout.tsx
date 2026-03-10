@@ -43,6 +43,7 @@ function RootNav() {
       <Stack.Screen name="workout-session" options={{ gestureEnabled: false }} />
       <Stack.Screen name="privacy-policy" />
       <Stack.Screen name="terms" />
+      <Stack.Screen name="run-detail" />
       <Stack.Screen name="modal" options={{ presentation: "modal" }} />
     </Stack>
   );
