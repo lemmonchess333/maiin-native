@@ -38,6 +38,7 @@ function RootNav() {
       <Stack.Screen name="history" />
       <Stack.Screen name="settings" />
       <Stack.Screen name="edit-profile" />
+      <Stack.Screen name="onboarding" />
       <Stack.Screen name="forgot-password" />
       <Stack.Screen name="modal" options={{ presentation: "modal" }} />
     </Stack>
