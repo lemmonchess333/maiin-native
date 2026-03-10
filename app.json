@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "maiinnative",
+    "scheme": "maiin",
     "userInterfaceStyle": "dark",
     "splash": {
       "image": "./assets/images/splash-icon.png",
@@ -14,7 +14,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.maiin.native",
+      "bundleIdentifier": "com.maiin.app",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Maiin uses your location to track running routes and distance.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Maiin uses background location to track your run even when the app is in the background.",
@@ -22,7 +22,7 @@
       }
     },
     "android": {
-      "package": "com.maiin.native",
+      "package": "com.maiin.app",
       "adaptiveIcon": {
         "backgroundColor": "#0F0F14",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
