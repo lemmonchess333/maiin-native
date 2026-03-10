@@ -6,6 +6,7 @@ import {
   Users,
   UserCircle,
   Apple,
+  ClipboardList,
 } from "lucide-react-native";
 import { colors } from "@/constants/Colors";
 
@@ -50,6 +51,15 @@ export default function TabLayout() {
           title: "Log",
           tabBarIcon: ({ color, size }) => (
             <Dumbbell size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="program"
+        options={{
+          title: "Program",
+          tabBarIcon: ({ color, size }) => (
+            <ClipboardList size={size} color={color} />
           ),
         }}
       />
