@@ -44,6 +44,7 @@ function RootNav() {
       <Stack.Screen name="privacy-policy" />
       <Stack.Screen name="terms" />
       <Stack.Screen name="run-detail" />
+      <Stack.Screen name="training-calendar" />
       <Stack.Screen name="modal" options={{ presentation: "modal" }} />
     </Stack>
   );

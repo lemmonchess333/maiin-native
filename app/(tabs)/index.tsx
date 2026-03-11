@@ -24,7 +24,7 @@ import { useStreakSync } from "@/hooks/useStreakSync";
 import { useStreaks } from "@/hooks/useStreaks";
 import { StreakCounter } from "@/components/StreakCounter";
 import { BadgeEarnedModal } from "@/components/BadgeEarnedModal";
-import { Dumbbell, Route, TrendingUp, Zap } from "lucide-react-native";
+import { Dumbbell, Route, TrendingUp, Zap, CalendarDays } from "lucide-react-native";
 import type { Activity } from "@/lib/types";
 
 function timeAgo(date: Date): string {
@@ -115,12 +115,20 @@ export default function HomeScreen() {
         }
       >
         {/* Header */}
-        <View className="mb-6 mt-2">
-          <Text className="text-base text-gray-400">{today}</Text>
-          <Text className="mt-1 text-2xl font-bold text-white">
-            Welcome back
-            {profile?.displayName ? `, ${profile.displayName}` : ""}
-          </Text>
+        <View className="mb-6 mt-2 flex-row items-start justify-between">
+          <View className="flex-1">
+            <Text className="text-base text-gray-400">{today}</Text>
+            <Text className="mt-1 text-2xl font-bold text-white">
+              Welcome back
+              {profile?.displayName ? `, ${profile.displayName}` : ""}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => router.push("/training-calendar")}
+            className="mt-1 rounded-lg bg-[#1A1A24] p-2"
+          >
+            <CalendarDays size={22} color="#8b5cf6" />
+          </TouchableOpacity>
         </View>
 
         {/* Weekly Stats */}
