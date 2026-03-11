@@ -1,0 +1,224 @@
+import { db } from "./firebase";
+import {
+  collection,
+  doc,
+  setDoc,
+  deleteDoc,
+  getDocs,
+  getDoc,
+  query,
+  orderBy,
+  limit,
+  startAfter,
+  where,
+  increment,
+  updateDoc,
+  addDoc,
+  Timestamp,
+  serverTimestamp,
+  type DocumentSnapshot,
+} from "firebase/firestore";
+
+// ── Follow / Unfollow ──────────────────────────────────
+export async function followUser(currentUid: string, targetUid: string) {
+  const now = Timestamp.now();
+  await setDoc(doc(db, "following", currentUid, "users", targetUid), {
+    followedAt: now,
+  });
+  await setDoc(doc(db, "followers", targetUid, "users", currentUid), {
+    followedAt: now,
+  });
+}
+
+export async function unfollowUser(currentUid: string, targetUid: string) {
+  await deleteDoc(doc(db, "following", currentUid, "users", targetUid));
+  await deleteDoc(doc(db, "followers", targetUid, "users", currentUid));
+}
+
+export async function isFollowing(
+  currentUid: string,
+  targetUid: string,
+): Promise<boolean> {
+  const snap = await getDoc(
+    doc(db, "following", currentUid, "users", targetUid),
+  );
+  return snap.exists();
+}
+
+// ── Post Activity + Fan-out ────────────────────────────
+export async function postActivity(activity: {
+  authorId: string;
+  authorName: string;
+  type: "run" | "workout";
+  visibility: "public" | "followers" | "private";
+  [key: string]: any;
+}) {
+  const activityRef = await addDoc(collection(db, "activities"), {
+    ...activity,
+    kudosCount: 0,
+    commentCount: 0,
+    createdAt: serverTimestamp(),
+  });
+
+  if (activity.visibility !== "private") {
+    const followersSnap = await getDocs(
+      collection(db, "followers", activity.authorId, "users"),
+    );
+
+    const summary =
+      activity.type === "run"
+        ? `${((activity.distance || 0) / 1000).toFixed(1)} km run · ${activity.avgPace || ""}`
+        : `${activity.exerciseCount || 0} exercises · ${activity.prsHit || 0} PRs`;
+
+    const feedItem = {
+      activityId: activityRef.id,
+      authorId: activity.authorId,
+      authorName: activity.authorName,
+      type: activity.type,
+      summary,
+      createdAt: serverTimestamp(),
+    };
+
+    const promises = followersSnap.docs.map((followerDoc) =>
+      addDoc(collection(db, "feeds", followerDoc.id, "items"), feedItem),
+    );
+    promises.push(
+      addDoc(collection(db, "feeds", activity.authorId, "items"), feedItem),
+    );
+    await Promise.all(promises);
+  }
+
+  return activityRef.id;
+}
+
+// ── Kudos ──────────────────────────────────────────────
+export async function toggleKudos(
+  activityId: string,
+  userId: string,
+): Promise<boolean> {
+  const kudosRef = doc(db, "kudos", activityId, "users", userId);
+  const snap = await getDoc(kudosRef);
+
+  if (snap.exists()) {
+    await deleteDoc(kudosRef);
+    await updateDoc(doc(db, "activities", activityId), {
+      kudosCount: increment(-1),
+    });
+    return false;
+  } else {
+    await setDoc(kudosRef, { createdAt: Timestamp.now() });
+    await updateDoc(doc(db, "activities", activityId), {
+      kudosCount: increment(1),
+    });
+    return true;
+  }
+}
+
+// ── Comments ───────────────────────────────────────────
+export async function addComment(
+  activityId: string,
+  authorId: string,
+  authorName: string,
+  text: string,
+) {
+  await addDoc(collection(db, "comments", activityId, "items"), {
+    authorId,
+    authorName,
+    text,
+    createdAt: serverTimestamp(),
+  });
+  await updateDoc(doc(db, "activities", activityId), {
+    commentCount: increment(1),
+  });
+}
+
+export async function getComments(activityId: string, limitCount = 20) {
+  const q = query(
+    collection(db, "comments", activityId, "items"),
+    orderBy("createdAt", "desc"),
+    limit(limitCount),
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+// ── Feed ───────────────────────────────────────────────
+export async function getFeed(
+  userId: string,
+  limitCount = 20,
+  afterDoc?: DocumentSnapshot,
+) {
+  let q = query(
+    collection(db, "feeds", userId, "items"),
+    orderBy("createdAt", "desc"),
+    limit(limitCount),
+  );
+  if (afterDoc) {
+    q = query(
+      collection(db, "feeds", userId, "items"),
+      orderBy("createdAt", "desc"),
+      startAfter(afterDoc),
+      limit(limitCount),
+    );
+  }
+  const snap = await getDocs(q);
+  return {
+    items: snap.docs.map((d) => ({ id: d.id, ...d.data() })),
+    lastDoc: snap.docs[snap.docs.length - 1],
+  };
+}
+
+export async function getActivity(activityId: string) {
+  const snap = await getDoc(doc(db, "activities", activityId));
+  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+}
+
+// ── Batch helpers ──────────────────────────────────────
+export async function batchGetActivities(
+  activityIds: string[],
+): Promise<Record<string, any>> {
+  if (activityIds.length === 0) return {};
+  const chunks: string[][] = [];
+  for (let i = 0; i < activityIds.length; i += 30) {
+    chunks.push(activityIds.slice(i, i + 30));
+  }
+  const results: Record<string, any> = {};
+  await Promise.all(
+    chunks.map(async (chunk) => {
+      const snaps = await Promise.all(
+        chunk.map((id) => getDoc(doc(db, "activities", id))),
+      );
+      snaps.forEach((snap) => {
+        if (snap.exists()) results[snap.id] = { id: snap.id, ...snap.data() };
+      });
+    }),
+  );
+  return results;
+}
+
+export async function batchGetKudos(
+  activityIds: string[],
+  userId: string,
+): Promise<Record<string, boolean>> {
+  if (activityIds.length === 0 || !userId) return {};
+  const snaps = await Promise.all(
+    activityIds.map((id) => getDoc(doc(db, "kudos", id, "users", userId))),
+  );
+  const result: Record<string, boolean> = {};
+  activityIds.forEach((id, i) => {
+    result[id] = snaps[i].exists();
+  });
+  return result;
+}
+
+// ── User Search ────────────────────────────────────────
+export async function searchUsers(queryStr: string, limitCount = 10) {
+  const q = query(
+    collection(db, "users"),
+    where("displayName", ">=", queryStr),
+    where("displayName", "<=", queryStr + "\uf8ff"),
+    limit(limitCount),
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
+}

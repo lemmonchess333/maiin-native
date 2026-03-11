@@ -4,6 +4,7 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
+  TextInput,
   RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,7 +18,10 @@ import {
   getChallengeColor,
 } from "@/hooks/useChallenges";
 import { useAuth } from "@/lib/auth-context";
+import { searchUsers } from "@/lib/socialApi";
 import * as haptics from "@/lib/haptics";
+import { LeaderboardCard } from "@/components/social/LeaderboardCard";
+import { ChallengeCard } from "@/components/social/ChallengeCard";
 import {
   Users,
   Heart,
@@ -58,6 +62,14 @@ export default function SocialScreen() {
   } = useChallenges();
   const [activeTab, setActiveTab] = useState<SocialTab>("feed");
   const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+
+  const handleSearch = useCallback(async () => {
+    if (!searchQuery.trim()) return;
+    const results = await searchUsers(searchQuery.trim());
+    setSearchResults(results.filter((r: any) => r.uid !== user?.uid));
+  }, [searchQuery, user]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -265,44 +277,9 @@ export default function SocialScreen() {
 
         {/* Leaderboard Tab */}
         {activeTab === "leaderboard" && (
-          <Card className="mb-4 mt-2">
-            <Text className="mb-2 text-sm font-semibold text-white">
-              Hybrid Score
-            </Text>
-            <Text className="mb-3 text-xs text-gray-400">
-              Combined lifting volume + running distance this week
-            </Text>
-            {uniqueUsers.length === 0 ? (
-              <Text className="text-sm text-gray-500">
-                Follow more athletes to see the leaderboard
-              </Text>
-            ) : (
-              uniqueUsers.slice(0, 10).map((person, i) => (
-                <View
-                  key={person.userId}
-                  className="flex-row items-center border-b border-[#2A2A3A] py-2.5 last:border-b-0"
-                >
-                  <Text className="mr-3 w-6 text-center text-sm font-bold text-gray-400">
-                    {i + 1}
-                  </Text>
-                  <View className="mr-3 h-8 w-8 items-center justify-center rounded-full bg-teal/20">
-                    <Text className="text-xs font-bold text-teal">
-                      {person.displayName[0]?.toUpperCase()}
-                    </Text>
-                  </View>
-                  <Text className="flex-1 text-sm text-white">
-                    {person.displayName}
-                  </Text>
-                  <View className="flex-row items-center gap-1">
-                    <Zap size={12} color="#f59e0b" />
-                    <Text className="text-sm font-semibold text-warning">
-                      --
-                    </Text>
-                  </View>
-                </View>
-              ))
-            )}
-          </Card>
+          <View className="mt-2">
+            <LeaderboardCard challenge="weekly_hybrid" />
+          </View>
         )}
 
         {/* Challenges Tab */}
@@ -320,55 +297,13 @@ export default function SocialScreen() {
                       (c) => c.id === uc.challengeId,
                     );
                     if (!challenge) return null;
-                    const pct = Math.min(
-                      (uc.progress / challenge.target.value) * 100,
-                      100,
-                    );
-                    const color = getChallengeColor(challenge.type);
                     return (
-                      <Card key={uc.challengeId} className="mb-3">
-                        <View className="flex-row items-center justify-between">
-                          <View className="flex-1">
-                            <Text className="text-sm font-bold text-white">
-                              {challenge.name}
-                            </Text>
-                            <Text className="text-xs text-gray-400">
-                              {challenge.description}
-                            </Text>
-                          </View>
-                          <View
-                            className="rounded-full px-2 py-0.5"
-                            style={{ backgroundColor: color + "20" }}
-                          >
-                            <Text
-                              className="text-[10px] font-semibold"
-                              style={{ color }}
-                            >
-                              {challenge.type}
-                            </Text>
-                          </View>
-                        </View>
-                        <View className="mt-2">
-                          <View className="flex-row justify-between">
-                            <Text className="text-[10px] text-gray-400">
-                              {uc.progress} / {challenge.target.value}{" "}
-                              {challenge.target.unit}
-                            </Text>
-                            <Text className="text-[10px] text-gray-400">
-                              {Math.round(pct)}%
-                            </Text>
-                          </View>
-                          <View className="mt-1 h-2 rounded-full bg-[#2A2A3A]">
-                            <View
-                              className="h-full rounded-full"
-                              style={{
-                                width: `${pct}%`,
-                                backgroundColor: color,
-                              }}
-                            />
-                          </View>
-                        </View>
-                      </Card>
+                      <ChallengeCard
+                        key={uc.challengeId}
+                        challenge={challenge}
+                        userChallenge={uc}
+                        color={getChallengeColor(challenge.type)}
+                      />
                     );
                   })}
               </>
@@ -377,95 +312,71 @@ export default function SocialScreen() {
             <Text className="mb-2 mt-2 text-sm font-semibold text-white">
               Available Challenges
             </Text>
-            {availableChallenges.map((challenge) => {
-              const color = getChallengeColor(challenge.type);
-              return (
-                <Card key={challenge.id} className="mb-3">
-                  <View className="flex-row items-center justify-between">
-                    <View className="flex-1">
-                      <Text className="text-sm font-bold text-white">
-                        {challenge.name}
-                      </Text>
-                      <Text className="text-xs text-gray-400">
-                        {challenge.description}
-                      </Text>
-                      <View className="mt-1 flex-row items-center gap-2">
-                        <View
-                          className="rounded-full px-2 py-0.5"
-                          style={{ backgroundColor: color + "20" }}
-                        >
-                          <Text
-                            className="text-[10px] font-semibold"
-                            style={{ color }}
-                          >
-                            {challenge.type}
-                          </Text>
-                        </View>
-                        <Text className="text-[10px] text-gray-500">
-                          {challenge.duration}
-                        </Text>
-                      </View>
-                    </View>
-                    <TouchableOpacity
-                      className="rounded-xl bg-teal px-3 py-2"
-                      onPress={() => {
-                        haptics.success();
-                        joinChallenge(challenge.id);
-                      }}
-                    >
-                      <Text className="text-xs font-semibold text-white">
-                        Join
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </Card>
-              );
-            })}
+            {availableChallenges.map((challenge) => (
+              <ChallengeCard
+                key={challenge.id}
+                challenge={challenge}
+                color={getChallengeColor(challenge.type)}
+                onJoin={() => joinChallenge(challenge.id)}
+              />
+            ))}
           </>
         )}
 
         {/* Find Tab */}
         {activeTab === "find" && (
           <>
-            <Text className="mb-3 mt-2 text-sm text-gray-400">
-              Discover athletes in the community
-            </Text>
-            {uniqueUsers.length === 0 ? (
-              <EmptyState
-                icon={<Search size={28} color="#2dd4bf" />}
-                title="No Users Found"
-                subtitle="Be the first to post and others will find you!"
+            <View className="mb-3 mt-2 flex-row gap-2">
+              <TextInput
+                className="flex-1 rounded-lg border border-[#2A2A3A] bg-[#1A1A24] px-3 py-2 text-sm text-white"
+                placeholder="Search by name..."
+                placeholderTextColor="#6B7280"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                onSubmitEditing={handleSearch}
               />
-            ) : (
-              uniqueUsers.map((person) => {
-                const isFollowing = following.includes(person.userId);
-                return (
-                  <Card key={person.userId} className="mb-3">
-                    <View className="flex-row items-center justify-between">
-                      <View className="flex-row items-center gap-3">
-                        <View className="h-10 w-10 items-center justify-center rounded-full bg-teal/20">
-                          <Text className="text-sm font-bold text-teal">
-                            {person.displayName[0]?.toUpperCase()}
-                          </Text>
-                        </View>
-                        <Text className="text-sm font-semibold text-white">
-                          {person.displayName}
+              <TouchableOpacity
+                className="rounded-lg bg-brand px-4 py-2"
+                onPress={handleSearch}
+              >
+                <Text className="text-sm font-medium text-white">Search</Text>
+              </TouchableOpacity>
+            </View>
+            {searchResults.map((u: any) => {
+              const isUserFollowing = following.includes(u.uid);
+              return (
+                <Card key={u.uid} className="mb-3">
+                  <View className="flex-row items-center justify-between">
+                    <View className="flex-row items-center gap-3">
+                      <View className="h-10 w-10 items-center justify-center rounded-full bg-teal/20">
+                        <Text className="text-sm font-bold text-teal">
+                          {(u.displayName || "?").charAt(0).toUpperCase()}
                         </Text>
                       </View>
-                      <TouchableOpacity
-                        className={`rounded-xl px-3 py-2 ${isFollowing ? "bg-[#2A2A3A]" : "bg-teal"}`}
-                        onPress={() => handleFollowToggle(person.userId)}
-                      >
-                        <Text
-                          className={`text-xs font-semibold ${isFollowing ? "text-gray-400" : "text-white"}`}
-                        >
-                          {isFollowing ? "Following" : "Follow"}
-                        </Text>
-                      </TouchableOpacity>
+                      <Text className="text-sm font-semibold text-white" numberOfLines={1}>
+                        {u.displayName}
+                      </Text>
                     </View>
-                  </Card>
-                );
-              })
+                    <TouchableOpacity
+                      className={`rounded-xl px-3 py-2 ${isUserFollowing ? "bg-[#2A2A3A]" : "bg-teal"}`}
+                      onPress={() => handleFollowToggle(u.uid)}
+                    >
+                      <Text
+                        className={`text-xs font-semibold ${isUserFollowing ? "text-gray-400" : "text-white"}`}
+                      >
+                        {isUserFollowing ? "Following" : "Follow"}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </Card>
+              );
+            })}
+            {searchResults.length === 0 && !searchQuery && (
+              <EmptyState
+                icon={<Search size={28} color="#2dd4bf" />}
+                title="Find Athletes"
+                subtitle="Search by name to find and follow other athletes"
+              />
             )}
           </>
         )}

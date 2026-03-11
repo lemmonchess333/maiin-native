@@ -48,6 +48,18 @@ export interface UserProfile {
   userId: string;
   displayName: string;
   biologicalSex?: "male" | "female";
+  weightKg?: number;
+  heightCm?: number;
+  age?: number;
+  athleteType?: string;
+  calorieTarget?: number;
+  proteinTarget?: number;
+  carbsTarget?: number;
+  fatTarget?: number;
+  phaseMode?: string;
+  runMode?: string;
+  onboardingComplete?: boolean;
+  schedule?: { day: number; type: string }[];
   totalWorkouts: number;
   totalRuns: number;
   totalMiles: number;

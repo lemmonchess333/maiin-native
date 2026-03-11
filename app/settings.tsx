@@ -354,7 +354,13 @@ export default function SettingsScreen() {
           <SettingRow
             icon={<Shield size={16} color="#f59e0b" />}
             label="Privacy Policy"
-            onPress={() => {}}
+            onPress={() => router.push("/privacy-policy")}
+          />
+          <View className="border-b border-[#2A2A3A]" />
+          <SettingRow
+            icon={<Shield size={16} color="#2dd4bf" />}
+            label="Terms of Service"
+            onPress={() => router.push("/terms")}
           />
         </Card>
 

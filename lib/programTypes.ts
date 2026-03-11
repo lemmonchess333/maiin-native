@@ -55,6 +55,52 @@ export interface WorkoutDay {
   isCustom?: boolean;
 }
 
+export interface ProgramSettings {
+  autoProgression: boolean;
+  microloading: boolean;
+}
+
+export interface WeekSnapshot {
+  weekNumber: number;
+  workouts: WorkoutDay[];
+}
+
+export interface ScheduledRunDay {
+  dayIndex: number;
+  templateId: string;
+  type: string;
+  completed: boolean;
+  userOverride?: string;
+}
+
+export interface RunPlan {
+  mode: "structured" | "race_prep";
+  raceGoal?: { distance: string; targetDate: string };
+  totalWeeks?: number;
+  currentWeek?: number;
+}
+
+export interface ProgramState {
+  goal: Goal;
+  currentPhase: string;
+  weekNumber: number;
+  splitType: SplitType;
+  workouts: WorkoutDay[];
+  fatigueScore: number;
+  updatedAt: number;
+  settings?: ProgramSettings;
+  weekHistory?: WeekSnapshot[];
+  runDays?: ScheduledRunDay[];
+  runPlan?: RunPlan;
+}
+
+export interface WeeklyPrescription {
+  week: number;
+  intensityMultiplier: number;
+  volumeModifier: number;
+  deload: boolean;
+}
+
 export function normalizeExercise(
   ex: Partial<ProgramExercise> & { name: string; exerciseId: string },
 ): ProgramExercise {
@@ -72,5 +118,17 @@ export function normalizeExercise(
     plateauCount: ex.plateauCount ?? 0,
     performanceHistory: ex.performanceHistory ?? [],
     lastPerformance: ex.lastPerformance ?? null,
+  };
+}
+
+export function normalizeProgramState(state: ProgramState): ProgramState {
+  return {
+    ...state,
+    settings: state.settings ?? { autoProgression: true, microloading: true },
+    weekHistory: state.weekHistory ?? [],
+    workouts: state.workouts.map((day) => ({
+      ...day,
+      exercises: day.exercises.map((ex) => normalizeExercise(ex)),
+    })),
   };
 }
