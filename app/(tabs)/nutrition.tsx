@@ -15,7 +15,14 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { useMeals, type MealItem } from "@/hooks/useMeals";
 import { useWaterLog } from "@/hooks/useWaterLog";
 import { useFoodAnalysis } from "@/hooks/useFoodAnalysis";
+import { useFoodFavourites } from "@/hooks/useFoodFavourites";
+import { parseFoodText } from "@/lib/nlFoodParser";
 import * as haptics from "@/lib/haptics";
+import { WaterTracker } from "@/components/nutrition/WaterTracker";
+import { HealthScoreCard } from "@/components/nutrition/HealthScoreCard";
+import { QuickRelog } from "@/components/nutrition/QuickRelog";
+import { VoiceLogger } from "@/components/nutrition/VoiceLogger";
+import { BarcodeScanner } from "@/components/nutrition/BarcodeScanner";
 import {
   Camera,
   Plus,
@@ -23,6 +30,8 @@ import {
   Trash2,
   Search,
   Flame,
+  ScanLine,
+  Mic,
 } from "lucide-react-native";
 
 export default function NutritionScreen() {
@@ -30,7 +39,10 @@ export default function NutritionScreen() {
   const { meals, addMeal, deleteMeal, getDailyTotals } = useMeals();
   const { glasses, target, logWater, progress } = useWaterLog();
   const { analyzeFood, loading: analyzing, result, reset } = useFoodAnalysis();
+  const { addFavourite } = useFoodFavourites();
   const [showManualAdd, setShowManualAdd] = useState(false);
+  const [showBarcode, setShowBarcode] = useState(false);
+  const [showVoice, setShowVoice] = useState(false);
   const [manualName, setManualName] = useState("");
   const [manualCals, setManualCals] = useState("");
   const [manualProtein, setManualProtein] = useState("");
@@ -80,6 +92,70 @@ export default function NutritionScreen() {
     setManualCarbs("");
     setManualFat("");
     setShowManualAdd(false);
+  }
+
+  async function handleBarcodeLog(food: any) {
+    haptics.success();
+    const item: MealItem = {
+      name: food.name,
+      portionSize: food.servingSize,
+      calories: Math.round(food.calories * food.servings),
+      protein: Math.round(food.protein * food.servings),
+      carbs: Math.round(food.carbs * food.servings),
+      fat: Math.round(food.fat * food.servings),
+    };
+    await addMeal(today, food.name, [item]);
+    await addFavourite({
+      name: food.name,
+      calories: item.calories,
+      protein: item.protein,
+      carbs: item.carbs,
+      fat: item.fat,
+      servingSize: food.servingSize,
+      source: "barcode",
+    });
+    setShowBarcode(false);
+  }
+
+  async function handleVoiceResult(text: string) {
+    const parsed = parseFoodText(text);
+    if (parsed.length === 0) {
+      Alert.alert("Could not parse", "Try describing your food differently.");
+      return;
+    }
+    haptics.success();
+    const items: MealItem[] = parsed.map((p) => ({
+      name: p.name,
+      portionSize: "1 serving",
+      calories: p.calories,
+      protein: p.protein,
+      carbs: p.carbs,
+      fat: p.fat,
+    }));
+    const name = parsed.map((p) => p.name).join(", ");
+    await addMeal(today, name, items);
+    setShowVoice(false);
+  }
+
+  async function handleQuickRelog(fav: any) {
+    haptics.success();
+    const item: MealItem = {
+      name: fav.name,
+      portionSize: fav.servingSize,
+      calories: fav.calories,
+      protein: fav.protein,
+      carbs: fav.carbs,
+      fat: fav.fat,
+    };
+    await addMeal(today, fav.name, [item]);
+    await addFavourite({
+      name: fav.name,
+      calories: fav.calories,
+      protein: fav.protein,
+      carbs: fav.carbs,
+      fat: fav.fat,
+      servingSize: fav.servingSize,
+    });
   }
 
   // Macro bar
@@ -161,27 +237,71 @@ export default function NutritionScreen() {
         </Card>
 
         {/* Quick Actions */}
-        <View className="mb-4 flex-row gap-3">
+        <View className="mb-3 flex-row gap-2">
           <TouchableOpacity
-            className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-brand py-3"
+            className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl bg-brand py-3"
             onPress={handleCameraCapture}
             disabled={analyzing}
           >
-            <Camera size={16} color="#fff" />
-            <Text className="text-sm font-semibold text-white">
-              {analyzing ? "Analyzing..." : "Scan Food"}
+            <Camera size={14} color="#fff" />
+            <Text className="text-xs font-semibold text-white">
+              {analyzing ? "..." : "Photo"}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-[#1A1A24] py-3"
-            onPress={() => setShowManualAdd(!showManualAdd)}
+            className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl bg-[#1A1A24] py-3"
+            onPress={() => {
+              setShowBarcode(!showBarcode);
+              setShowManualAdd(false);
+              setShowVoice(false);
+            }}
           >
-            <Plus size={16} color="#8b5cf6" />
-            <Text className="text-sm font-semibold text-brand">
-              Manual Add
-            </Text>
+            <ScanLine size={14} color="#8b5cf6" />
+            <Text className="text-xs font-semibold text-brand">Barcode</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl bg-[#1A1A24] py-3"
+            onPress={() => {
+              setShowVoice(!showVoice);
+              setShowManualAdd(false);
+              setShowBarcode(false);
+            }}
+          >
+            <Mic size={14} color="#2dd4bf" />
+            <Text className="text-xs font-semibold text-teal">Voice</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl bg-[#1A1A24] py-3"
+            onPress={() => {
+              setShowManualAdd(!showManualAdd);
+              setShowBarcode(false);
+              setShowVoice(false);
+            }}
+          >
+            <Plus size={14} color="#f59e0b" />
+            <Text className="text-xs font-semibold text-warning">Manual</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Barcode Scanner */}
+        {showBarcode && (
+          <Card className="mb-4">
+            <BarcodeScanner
+              onLog={handleBarcodeLog}
+              onClose={() => setShowBarcode(false)}
+            />
+          </Card>
+        )}
+
+        {/* Voice Logger */}
+        {showVoice && (
+          <Card className="mb-4">
+            <VoiceLogger
+              onResult={handleVoiceResult}
+              onClose={() => setShowVoice(false)}
+            />
+          </Card>
+        )}
 
         {/* Manual Add Form */}
         {showManualAdd && (
@@ -231,41 +351,20 @@ export default function NutritionScreen() {
           </Card>
         )}
 
+        {/* Quick Relog */}
+        <View className="mb-4">
+          <QuickRelog onSelect={handleQuickRelog} />
+        </View>
+
+        {/* Health Score */}
+        <View className="mb-4">
+          <HealthScoreCard />
+        </View>
+
         {/* Water Tracking */}
-        <SectionHeader title="Water" />
-        <Card className="mb-4">
-          <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center gap-2">
-              <Droplets size={18} color="#3b82f6" />
-              <View>
-                <Text className="text-sm font-semibold text-white">
-                  {glasses} / {target} glasses
-                </Text>
-                <Text className="text-xs text-gray-400">
-                  {Math.round(progress * 100)}% of daily goal
-                </Text>
-              </View>
-            </View>
-            <TouchableOpacity
-              className="rounded-xl bg-blue-500/15 px-4 py-2"
-              onPress={() => {
-                haptics.lightTap();
-                logWater(1);
-              }}
-            >
-              <Text className="text-sm font-semibold text-blue-400">
-                + Glass
-              </Text>
-            </TouchableOpacity>
-          </View>
-          {/* Water progress bar */}
-          <View className="mt-2 h-2 rounded-full bg-[#2A2A3A]">
-            <View
-              className="h-full rounded-full bg-blue-500"
-              style={{ width: `${Math.min(progress * 100, 100)}%` }}
-            />
-          </View>
-        </Card>
+        <View className="mb-4">
+          <WaterTracker />
+        </View>
 
         {/* Today's Meals */}
         <SectionHeader title="Today's Meals" />
